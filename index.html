@@ -1,0 +1,1780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>EZZETA · Inventario Cíclico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@700;800&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --denim-950:#131c30;
+  --denim-900:#182541;
+  --denim-800:#213158;
+  --denim-700:#2c4270;
+  --denim-600:#3c5690;
+  --denim-500:#4d6aab;
+  --stitch:#5b76ad;
+  --brass:#c8935a;
+  --brass-bright:#e2ac72;
+  --brass-dim:#8a5f34;
+  --paper:#eee7d8;
+  --ink:#eef1f7;
+  --ink-dim:#9fabc7;
+  --ok:#5cb98a;
+  --ok-bg:rgba(92,185,138,0.14);
+  --warn:#e2ac72;
+  --warn-bg:rgba(226,172,114,0.14);
+  --bad:#e08072;
+  --bad-bg:rgba(224,128,114,0.14);
+  --radius:14px;
+  --navh:64px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(circle at 15% 0%, rgba(91,118,173,0.18), transparent 55%),
+    radial-gradient(circle at 90% 10%, rgba(200,147,90,0.10), transparent 45%),
+    var(--denim-950);
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;
+  padding:0 0 calc(var(--navh) + 22px);
+}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px;}
+
+/* ===== top logo bar ===== */
+.logobar{
+  position:sticky; top:0; z-index:40;
+  background:linear-gradient(160deg,var(--denim-900),var(--denim-950));
+  border-bottom:1px solid var(--denim-700);
+  box-shadow:0 6px 18px rgba(0,0,0,0.28);
+  padding:10px 16px;
+}
+.logobar-inner{max-width:640px;margin:0 auto;display:flex; align-items:center; gap:10px;}
+.logo-badge{
+  position:relative; width:38px; height:38px; border-radius:10px; flex:none;
+  background:linear-gradient(160deg,var(--denim-800),var(--denim-900));
+  border:1px solid var(--brass-dim);
+  display:flex; align-items:center; justify-content:center;
+}
+.logo-badge svg{width:22px;height:22px;}
+.logo-badge::before, .logo-badge::after{
+  content:""; position:absolute; width:5px; height:5px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, var(--brass-bright), var(--brass) 60%, var(--brass-dim) 100%);
+}
+.logo-badge::before{top:3px;left:3px;} .logo-badge::after{bottom:3px;right:3px;}
+.logo-text{line-height:1.15;}
+.logo-word{
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:19px; letter-spacing:1.5px;
+  color:var(--ink); display:flex; align-items:baseline; gap:6px;
+}
+.logo-word .pill{
+  font-family:'Roboto Mono',monospace; font-size:9px; letter-spacing:1px; font-weight:700;
+  color:var(--denim-950); background:var(--brass-bright); padding:1.5px 5px; border-radius:5px;
+  text-transform:uppercase;
+}
+.logo-sub{font-family:'Roboto Mono',monospace; font-size:9.5px; letter-spacing:1.5px; color:var(--ink-dim); text-transform:uppercase; margin-top:1px;}
+.logobar-right{margin-left:auto; text-align:right;}
+.logobar-right .lr-label{font-size:9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:1px;}
+.logobar-right .lr-val{font-family:'Roboto Mono',monospace; font-size:13px; font-weight:700; color:var(--brass-bright);}
+
+/* header / tag */
+.tag{
+  position:relative;
+  background:linear-gradient(160deg,var(--denim-800),var(--denim-900));
+  border:1px solid var(--denim-700);
+  border-radius:var(--radius);
+  padding:16px 18px 14px;
+  margin:14px 0 12px;
+  overflow:hidden;
+}
+.tag::before{
+  content:"";
+  position:absolute; top:-30px; right:-30px;
+  width:120px; height:120px; border-radius:50%;
+  background:radial-gradient(circle, rgba(200,147,90,0.25), transparent 70%);
+}
+.rivet{
+  position:absolute; width:9px; height:9px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, var(--brass-bright), var(--brass) 60%, #8a5f34 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,0.4);
+}
+.rivet.tl{top:10px;left:10px;} .rivet.tr{top:10px;right:10px;}
+.eyebrow{
+  font-family:'Roboto Mono',monospace;
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--brass-bright); margin:0 0 4px;
+}
+h1{
+  font-family:'Oswald',sans-serif; font-weight:700; letter-spacing:0.5px;
+  font-size:22px; margin:0; color:var(--ink);
+}
+.sub{color:var(--ink-dim); font-size:13px; margin-top:4px; line-height:1.4;}
+
+/* sticky mini summary */
+.ministrip{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:12px;
+}
+.ministrip .box{
+  background:var(--denim-900); border:1px solid var(--denim-700); border-radius:10px;
+  padding:8px 6px; text-align:center;
+}
+.ministrip .box .n{font-family:'Roboto Mono',monospace; font-weight:700; font-size:16px;}
+.ministrip .box .l{font-size:9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:1px;}
+.ministrip .box.ok .n{color:var(--ok);}
+.ministrip .box.over .n{color:var(--warn);}
+.ministrip .box.under .n{color:var(--bad);}
+
+.card{
+  background:var(--denim-900);
+  border:1px solid var(--denim-700);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:14px;
+}
+.card h2{
+  font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1.5px;
+  text-transform:uppercase; color:var(--ink-dim); margin:0 0 10px;
+  display:flex; align-items:center; gap:8px;
+}
+.card h2 .dot{width:6px;height:6px;border-radius:50%;background:var(--brass);}
+.card h2 .count-badge{
+  margin-left:auto; font-family:'Roboto Mono',monospace; font-size:11px; font-weight:700;
+  color:var(--brass-bright); background:var(--denim-950); border:1px solid var(--denim-700);
+  padding:2px 8px; border-radius:20px; text-transform:none; letter-spacing:0;
+}
+
+/* scan input */
+.scan-row{display:flex; gap:8px;}
+input[type=text], input[type=number], select{
+  background:var(--denim-950);
+  border:1px solid var(--denim-700);
+  color:var(--ink);
+  border-radius:10px;
+  padding:13px 14px;
+  font-size:16px;
+  font-family:'Roboto Mono',monospace;
+  width:100%;
+  outline:none;
+}
+select{-webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239fabc7'><path d='M5 7l5 5 5-5z'/></svg>"); background-repeat:no-repeat; background-position:right 12px center; padding-right:34px;}
+input[type=text]:focus, input[type=number]:focus, select:focus{border-color:var(--stitch); box-shadow:0 0 0 3px rgba(91,118,173,0.25);}
+.btn{
+  border:none; border-radius:10px; padding:13px 16px;
+  font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+  cursor:pointer; white-space:nowrap;
+  transition:transform .08s ease, filter .15s ease;
+}
+.btn:active{transform:scale(0.97);}
+.btn-brass{background:linear-gradient(180deg,var(--brass-bright),var(--brass)); color:#2a1c0d;}
+.btn-ghost{background:var(--denim-800); color:var(--ink); border:1px solid var(--denim-700);}
+.btn-ok{background:linear-gradient(180deg,#6fce9e,var(--ok)); color:#0c2a1c;}
+.btn-block{width:100%;}
+.btn:disabled{opacity:0.45; cursor:not-allowed;}
+.btn-sm{padding:8px 12px; font-size:12.5px; border-radius:8px;}
+
+#camWrap{margin-top:10px; border-radius:10px; overflow:hidden; display:none; border:1px solid var(--denim-700);}
+#reader{width:100%;}
+
+.hint{font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5;}
+
+/* product panel */
+#panel{display:none;}
+.prod-title{font-family:'Oswald',sans-serif; font-size:18px; font-weight:600; margin:2px 0 2px; color:var(--ink);}
+.prod-meta{color:var(--ink-dim); font-size:13px; margin-bottom:12px;}
+.prod-tags{display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;}
+.prod-tag{
+  font-family:'Roboto Mono',monospace; font-size:10.5px; letter-spacing:0.5px;
+  background:var(--denim-950); border:1px solid var(--denim-700); color:var(--brass-bright);
+  padding:3px 8px; border-radius:20px;
+}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;}
+.stat{
+  background:var(--denim-950); border:1px solid var(--denim-700); border-radius:10px;
+  padding:10px 12px;
+}
+.stat .k{font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-dim);}
+.stat .v{font-family:'Roboto Mono',monospace; font-size:20px; font-weight:700; margin-top:2px;}
+.found-row{display:flex; gap:8px; align-items:stretch; margin-bottom:10px;}
+.stepper{display:flex; border:1px solid var(--denim-700); border-radius:10px; overflow:hidden;}
+.stepper button{background:var(--denim-800); color:var(--ink); border:none; width:42px; font-size:18px; cursor:pointer;}
+.stepper input{border:none; border-radius:0; width:64px; text-align:center;}
+
+.diff-banner{
+  display:none; align-items:center; gap:10px;
+  border-radius:10px; padding:10px 12px; font-size:13.5px; font-weight:600; margin-bottom:12px;
+}
+.diff-ok{background:var(--ok-bg); color:var(--ok);}
+.diff-over{background:var(--warn-bg); color:var(--warn);}
+.diff-under{background:var(--bad-bg); color:var(--bad);}
+
+.search-box{position:relative; margin-top:10px;}
+#searchResults{
+  position:absolute; z-index:35; left:0; right:0; top:calc(100% + 6px);
+  background:var(--denim-900); border:1px solid var(--denim-700); border-radius:10px;
+  max-height:260px; overflow-y:auto; display:none;
+  box-shadow:0 10px 24px rgba(0,0,0,0.35);
+}
+.sr-item{padding:10px 12px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--denim-800);}
+.sr-item:last-child{border-bottom:none;}
+.sr-item:hover{background:var(--denim-800);}
+.sr-item .sr-sku{color:var(--brass-bright); font-family:'Roboto Mono',monospace; font-size:11px;}
+
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th{
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px;
+  color:var(--ink-dim); padding:6px 8px; border-bottom:1px solid var(--denim-700);
+}
+td{padding:8px; border-bottom:1px solid var(--denim-800); vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+.badge{
+  display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.badge-ok{background:var(--ok-bg); color:var(--ok);}
+.badge-over{background:var(--warn-bg); color:var(--warn);}
+.badge-under{background:var(--bad-bg); color:var(--bad);}
+.row-del{background:none; border:none; color:var(--ink-dim); cursor:pointer; font-size:15px; padding:2px 6px;}
+.row-del:hover{color:var(--bad);}
+.empty{text-align:center; color:var(--ink-dim); font-size:13px; padding:20px 0;}
+
+.actions-row{display:flex; gap:8px; margin-top:12px;}
+.toast{
+  position:fixed; left:50%; bottom:calc(var(--navh) + 14px); transform:translateX(-50%) translateY(20px);
+  background:var(--denim-800); border:1px solid var(--denim-600); color:var(--ink);
+  padding:10px 18px; border-radius:30px; font-size:13px; opacity:0;
+  transition:all .25s ease; pointer-events:none; z-index:60; max-width:88%; text-align:center;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-thumb{background:var(--denim-700); border-radius:4px;}
+
+/* KPI para gerencia: ERI / ERU */
+.kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;}
+.kpi-box{
+  background:var(--denim-950); border:1px solid var(--denim-700); border-radius:12px;
+  padding:14px 12px; text-align:center; position:relative;
+}
+.kpi-box .kpi-label{font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-dim);}
+.kpi-box .kpi-value{font-family:'Roboto Mono',monospace; font-weight:700; font-size:32px; margin:4px 0 2px;}
+.kpi-box .kpi-sub{font-size:11px; color:var(--ink-dim);}
+.kpi-box.good .kpi-value{color:var(--ok);}
+.kpi-box.warn .kpi-value{color:var(--warn);}
+.kpi-box.bad .kpi-value{color:var(--bad);}
+.kpi-box.neutral .kpi-value{color:var(--ink-dim);}
+.kpi-formula{font-size:11px; color:var(--ink-dim); margin-top:10px; line-height:1.5; border-top:1px dashed var(--denim-700); padding-top:8px;}
+.kpi-formula b{color:var(--ink);}
+
+.loc-toggle{
+  background:none; border:none; color:var(--brass-bright); font-size:12.5px;
+  cursor:pointer; padding:2px 0; margin-bottom:8px; text-decoration:underline;
+}
+.loc-fields{display:none; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+.loc-fields.open{display:grid;}
+.loc-fields label{font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-dim); display:block; margin-bottom:3px;}
+
+/* ===== mode selector (criterio) ===== */
+.mode-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;}
+.mode-btn{
+  background:var(--denim-950); border:1px solid var(--denim-700); border-radius:12px;
+  padding:12px 10px; text-align:left; cursor:pointer; color:var(--ink);
+  transition:border-color .15s ease, background .15s ease;
+}
+.mode-btn .mi{font-size:18px; margin-bottom:4px; display:block;}
+.mode-btn .mt{font-family:'Oswald',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.3px;}
+.mode-btn .md{font-size:10.5px; color:var(--ink-dim); margin-top:2px; line-height:1.3;}
+.mode-btn.active{border-color:var(--brass); background:linear-gradient(160deg,rgba(200,147,90,0.14),var(--denim-950));}
+.mode-btn.active .mt{color:var(--brass-bright);}
+
+.progress-bar{width:100%; height:9px; background:var(--denim-950); border:1px solid var(--denim-700); border-radius:20px; overflow:hidden; margin:4px 0 10px;}
+.progress-fill{height:100%; background:linear-gradient(90deg,var(--brass),var(--brass-bright)); border-radius:20px; transition:width .3s ease; width:0%;}
+
+.wl-search{margin-bottom:8px;}
+#worklist{max-height:360px; overflow-y:auto; border:1px solid var(--denim-800); border-radius:10px;}
+.wl-item{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--denim-800);
+  cursor:pointer;
+}
+.wl-item:last-child{border-bottom:none;}
+.wl-item:active{background:var(--denim-800);}
+.wl-item.done{opacity:0.45;}
+.wl-check{
+  flex:none; width:20px; height:20px; border-radius:6px; border:1px solid var(--denim-700);
+  display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--ok);
+  background:var(--denim-950);
+}
+.wl-item.done .wl-check{background:var(--ok-bg); border-color:var(--ok);}
+.wl-body{flex:1; min-width:0;}
+.wl-title{font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.wl-item.done .wl-title{text-decoration:line-through;}
+.wl-meta{font-size:11px; color:var(--ink-dim); font-family:'Roboto Mono',monospace; margin-top:1px;}
+.wl-stock{flex:none; text-align:right; font-family:'Roboto Mono',monospace; font-size:13px; font-weight:700;}
+.wl-empty{padding:24px 12px; text-align:center; color:var(--ink-dim); font-size:13px;}
+
+/* charts */
+.chart-card canvas{max-height:260px;}
+.chart-title{font-size:12px; color:var(--ink-dim); margin:0 0 8px; text-transform:uppercase; letter-spacing:0.5px; font-family:'Oswald',sans-serif;}
+.chart-empty{text-align:center; color:var(--ink-dim); font-size:13px; padding:30px 0;}
+
+/* ===== bottom tab nav ===== */
+.tabnav{
+  position:fixed; left:0; right:0; bottom:0; z-index:50;
+  background:linear-gradient(0deg,var(--denim-950) 60%, rgba(19,28,48,0.97));
+  border-top:1px solid var(--denim-700);
+  display:flex;
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  box-shadow:0 -6px 18px rgba(0,0,0,0.3);
+}
+.tab-btn{
+  flex:1; background:none; border:none; color:var(--ink-dim); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; border-radius:10px;
+  font-family:'Inter',sans-serif;
+}
+.tab-btn .ti{font-size:19px;}
+.tab-btn .tl{font-size:10px; letter-spacing:0.3px; font-weight:600;}
+.tab-btn.active{color:var(--brass-bright); background:rgba(200,147,90,0.12);}
+.tab-btn .tab-dot{
+  position:absolute; margin-top:-14px; margin-left:14px; width:7px; height:7px; border-radius:50%; background:var(--bad);
+  display:none;
+}
+
+.page{display:none;}
+.page.active{display:block;}
+
+/* mobile */
+@media (max-width:400px){
+  h1{font-size:20px;}
+  .ministrip{grid-template-columns:repeat(2,1fr);}
+  .kpi-grid{grid-template-columns:1fr;}
+  .grid2{grid-template-columns:1fr;}
+  .mode-grid{grid-template-columns:1fr;}
+  .kpi-box .kpi-value{font-size:28px;}
+  table{font-size:11.5px;}
+  th, td{padding:6px 5px;}
+}
+#tableWrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+#tableWrap table{min-width:520px;}
+
+/* ===================== AUTH SCREENS ===================== */
+#authScreen{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:24px 16px;
+  background:#0a0a0a;
+}
+.auth-card{
+  width:100%; max-width:380px;
+  background:#141414;
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:6px;
+  padding:40px 34px 32px;
+  position:relative;
+  text-align:center;
+}
+.auth-mark{
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 18px; height:44px;
+}
+.auth-mark .m1, .auth-mark .m2{
+  font-family:'Bodoni Moda', serif; font-weight:700; font-size:38px; line-height:1; color:#f2ede4;
+}
+.auth-mark .m2{ transform:scaleX(-1); margin-left:-14px; }
+.auth-eyebrow{
+  font-family:'Roboto Mono',monospace; font-size:10.5px; letter-spacing:3px; text-transform:uppercase;
+  color:#7d7a72; margin:0 0 18px; line-height:1.6;
+}
+.auth-wordmark{
+  font-family:'Bodoni Moda', serif; font-weight:700; font-size:34px; letter-spacing:1px;
+  color:#f2ede4; margin:0 0 26px;
+}
+.auth-logo{display:none;}
+.auth-title{display:none;}
+.auth-sub{
+  font-family:'Roboto Mono',monospace; font-size:11.5px; color:#7d7a72; margin:-14px 0 22px; line-height:1.6;
+}
+.field{margin-bottom:14px; text-align:left;}
+.field-label{
+  font-family:'Roboto Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#8a8780; display:block; margin-bottom:6px;
+}
+.auth-card input[type=text], .auth-card input[type=password]{
+  background:#0e0e0e; border:1px solid rgba(255,255,255,0.12); color:#f2ede4;
+  font-family:'Inter',sans-serif; font-size:14px;
+}
+.auth-card input[type=text]::placeholder, .auth-card input[type=password]::placeholder{ color:#5a5850; }
+.auth-card .btn-brass{
+  background:#f2ede4; color:#111; font-family:'Roboto Mono',monospace; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase; font-size:12.5px; border-radius:4px; padding:14px;
+  margin-top:6px;
+}
+.auth-card .btn-brass:hover{ filter:brightness(0.95); }
+.auth-footer{
+  margin-top:22px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08);
+  font-family:'Roboto Mono',monospace; font-size:10.5px; color:#6b685f; line-height:1.6;
+}
+.auth-error{
+  background:var(--bad-bg); color:var(--bad); font-size:12.5px; padding:8px 12px; border-radius:8px;
+  margin-bottom:12px; display:none;
+}
+.auth-switch{font-size:12px; color:var(--ink-dim); text-align:center; margin-top:14px;}
+.auth-switch a{color:var(--brass-bright); cursor:pointer; text-decoration:underline;}
+
+/* ===================== USER MODULE ===================== */
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;}
+@media (max-width:400px){ .form-grid{grid-template-columns:1fr;} }
+.role-pill{
+  display:inline-block; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:700;
+  letter-spacing:0.5px; text-transform:uppercase; border:1px solid; font-family:'Roboto Mono',monospace;
+}
+.role-pill.admin{color:var(--brass-bright); border-color:var(--brass-bright); background:rgba(226,172,114,0.08);}
+.role-pill.stock{color:var(--stitch); border-color:var(--stitch); background:rgba(91,118,173,0.10);}
+.role-pill.usuario{color:var(--ink-dim); border-color:var(--denim-600); background:rgba(159,171,199,0.06);}
+.btn-danger-outline{
+  background:none; border:1px solid var(--bad); color:var(--bad); border-radius:8px;
+  padding:6px 12px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;
+}
+.btn-danger-outline:hover{background:var(--bad-bg);}
+.session-tag{font-size:12px; color:var(--ink-dim); font-style:italic;}
+#usersTableWrap table{min-width:480px;}
+.userinfo{display:flex; align-items:center; gap:8px; margin-left:auto;}
+.userinfo .ui-name{font-size:11px; color:var(--ink); font-weight:600; line-height:1.2;}
+.userinfo .ui-role{font-size:9px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.5px;}
+.logout-btn{
+  background:none; border:1px solid var(--denim-700); color:var(--ink-dim); border-radius:8px;
+  width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px;
+  flex:none;
+}
+.logout-btn:hover{color:var(--bad); border-color:var(--bad);}
+.wl-meta .by{color:var(--brass-bright);}
+
+/* ===================== PRODUCT MODAL ===================== */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(10,15,26,0.72);
+  display:none; align-items:flex-end; justify-content:center;
+  z-index:80; padding:0;
+}
+.modal-overlay.open{display:flex;}
+.modal-sheet{
+  width:100%; max-width:640px;
+  background:linear-gradient(160deg,var(--denim-900),var(--denim-950));
+  border:1px solid var(--denim-700); border-bottom:none;
+  border-radius:18px 18px 0 0;
+  padding:16px 18px calc(18px + env(safe-area-inset-bottom));
+  max-height:88vh; overflow-y:auto;
+  box-shadow:0 -10px 30px rgba(0,0,0,0.4);
+}
+.modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+.modal-head h2{
+  font-family:'Oswald',sans-serif; font-size:14px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--ink-dim); display:flex; align-items:center; gap:8px; margin:0;
+}
+.modal-head .dot{width:6px;height:6px;border-radius:50%;background:var(--brass);}
+.modal-close{
+  background:var(--denim-800); border:1px solid var(--denim-700); color:var(--ink);
+  width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:14px; flex:none;
+}
+
+/* diff list reuses .wl-item pattern */
+.diff-badge-wrap{flex:none;}
+
+/* file input for stock import */
+input[type=file]{
+  background:var(--denim-950); border:1px dashed var(--denim-700); color:var(--ink-dim);
+  border-radius:10px; padding:12px; font-family:'Inter',sans-serif; font-size:13px; width:100%;
+}
+input[type=file]::file-selector-button{
+  background:var(--denim-800); color:var(--ink); border:1px solid var(--denim-700); border-radius:8px;
+  padding:6px 12px; margin-right:10px; cursor:pointer; font-family:'Inter',sans-serif; font-size:12.5px;
+}
+
+</style>
+</head>
+<body>
+<div id="authScreen">
+  <div class="auth-card" id="setupCard" style="display:none;">
+    <div class="auth-mark"><span class="m1">E</span><span class="m2">E</span></div>
+    <p class="auth-eyebrow">CONTROL DE<br>INVENTARIO CÍCLICO</p>
+    <p class="auth-wordmark">EZZETA</p>
+    <div class="auth-error" id="setupError"></div>
+    <div class="field">
+      <label class="field-label">Usuario</label>
+      <input type="text" id="setupUsername" placeholder="usuario" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field-label">Contraseña</label>
+      <input type="password" id="setupPassword" placeholder="mínimo 4 caracteres" autocomplete="new-password">
+    </div>
+    <button class="btn btn-brass btn-block" id="setupSubmitBtn">Ingresar</button>
+    <p class="auth-footer">Esta cuenta queda como Administrador principal.<br>Vas a poder agregar al resto del equipo después.</p>
+  </div>
+
+  <div class="auth-card" id="loginCard" style="display:none;">
+    <div class="auth-mark"><span class="m1">E</span><span class="m2">E</span></div>
+    <p class="auth-eyebrow">CONTROL DE<br>INVENTARIO CÍCLICO</p>
+    <p class="auth-wordmark">EZZETA</p>
+    <div class="auth-error" id="loginError"></div>
+    <div class="field">
+      <label class="field-label">Usuario</label>
+      <input type="text" id="loginUsername" placeholder="usuario" autocomplete="username">
+    </div>
+    <div class="field">
+      <label class="field-label">Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-brass btn-block" id="loginSubmitBtn">Ingresar</button>
+    <p class="auth-footer">Acceso exclusivo para usuarios registrados<br>por un administrador.</p>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+<div class="logobar">
+  <div class="logobar-inner">
+    <div class="logo-badge">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 4h16M4 4v6c0 4 3.5 5 3.5 5s3.5-1 3.5-5V4M4 4l3.5 16h1L12 12l3.5 8h1L20 4" stroke="#e2ac72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="logo-word">EZZETA <span class="pill">Company</span></div>
+      <div class="logo-sub">Inventario cíclico · V.E.S. · <span id="buildTag">build 4</span></div>
+    </div>
+    <div class="userinfo" id="userInfoBox" style="display:none;">
+      <div>
+        <div class="ui-name" id="uiName">—</div>
+        <div class="ui-role" id="uiRole">—</div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" title="Cerrar sesión">⏻</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="tag">
+    <div class="rivet tl"></div><div class="rivet tr"></div>
+    <h1>Conteo cíclico de inventario</h1>
+    <p class="sub">Elegí un criterio de conteo desde la lista, o revisá las diferencias detectadas para hacer los reconteos.</p>
+  </div>
+
+  <div class="ministrip" id="summary">
+    <div class="box"><div class="n" id="sumTotal">0</div><div class="l">Contados</div></div>
+    <div class="box ok"><div class="n" id="sumOk">0</div><div class="l">Coinciden</div></div>
+    <div class="box over"><div class="n" id="sumOver">0</div><div class="l">Sobrantes</div></div>
+    <div class="box under"><div class="n" id="sumUnder">0</div><div class="l">Faltantes</div></div>
+  </div>
+
+  <!-- ===================== PAGE: CRITERIO ===================== -->
+  <div class="page active" id="page-criterio">
+    <div class="card">
+      <h2><span class="dot"></span>Modo de conteo</h2>
+      <div class="mode-grid">
+        <button class="mode-btn active" data-mode="libre">
+          <span class="mi">🎯</span><span class="mt">Libre</span>
+          <span class="md">A tu criterio: cualquier código</span>
+        </button>
+        <button class="mode-btn" data-mode="stock">
+          <span class="mi">⚠️</span><span class="mt">Stock mínimo</span>
+          <span class="md">Variantes con menos de 10 uds.</span>
+        </button>
+        <button class="mode-btn" data-mode="marca">
+          <span class="mi">🏷️</span><span class="mt">Por marca</span>
+          <span class="md">Elegí una marca para contar</span>
+        </button>
+        <button class="mode-btn" data-mode="tipo">
+          <span class="mi">📦</span><span class="mt">Por modelo</span>
+          <span class="md">Elegí un tipo de producto</span>
+        </button>
+      </div>
+      <div id="criterioSub" style="display:none;">
+        <select id="criterioSelect"></select>
+      </div>
+      <div id="criterioLibre">
+        <div class="field">
+          <label class="field-label">Código o SKU</label>
+          <div class="scan-row">
+            <input type="text" id="libreCodeInput" placeholder="Escribí el código de barras o SKU…" autocomplete="off">
+            <button class="btn btn-brass" id="libreLoadBtn">Cargar</button>
+          </div>
+        </div>
+        <div class="search-box">
+          <input type="text" id="libreSearchInput" placeholder="Buscar por nombre, SKU, marca o modelo…" autocomplete="off">
+          <div id="libreSearchResults"></div>
+        </div>
+        <p class="hint">Modo libre: cargá cualquier código o buscá por nombre, esté catalogado o no. Elegí otro criterio arriba para generar una lista de conteo guiada.</p>
+      </div>
+    </div>
+
+    <div class="card" id="worklistCard" style="display:none;">
+      <h2><span class="dot"></span>Lista de conteo <span class="count-badge" id="wlBadge">0/0</span></h2>
+      <div class="progress-bar"><div class="progress-fill" id="wlProgressFill"></div></div>
+      <input type="text" class="wl-search" id="wlSearch" placeholder="Filtrar esta lista por nombre o SKU…">
+      <div id="worklist"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: DIFERENCIAS ===================== -->
+  <div class="page" id="page-diferencias">
+    <div class="card">
+      <h2><span class="dot"></span>Diferencias de inventario <span class="count-badge" id="diffBadge">0</span></h2>
+      <p class="hint" style="margin-top:-4px;">Productos ya contados cuyo resultado no coincidió con el sistema. Tocá uno para hacer el reconteo — si el nuevo conteo coincide, sale de esta lista.</p>
+      <input type="text" class="wl-search" id="diffSearch" placeholder="Filtrar por nombre o SKU…">
+      <div id="diffList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: RESULTADOS ===================== -->
+  <div class="page" id="page-resultados">
+    <div class="card" id="kpiCard">
+      <h2><span class="dot"></span>Indicadores para gerencia</h2>
+      <div class="kpi-grid">
+        <div class="kpi-box neutral" id="eriBox">
+          <div class="kpi-label">ERI</div>
+          <div class="kpi-value" id="eriValue">—</div>
+          <div class="kpi-sub" id="eriSub">Sin conteos aún</div>
+        </div>
+        <div class="kpi-box neutral" id="eruBox">
+          <div class="kpi-label">ERU</div>
+          <div class="kpi-value" id="eruValue">—</div>
+          <div class="kpi-sub" id="eruSub">Sin datos de ubicación</div>
+        </div>
+      </div>
+      <p class="kpi-formula">
+        <b>ERI</b> (Exactitud de Registro de Inventario) = SKUs contados sin diferencia ÷ total de SKUs contados.<br>
+        <b>ERU</b> (Exactitud de Registro de Ubicaciones) = ubicaciones físicas que coinciden con el sistema ÷ total de ubicaciones verificadas.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Resultados del conteo</h2>
+      <div id="tableWrap">
+        <table id="resultsTable">
+          <thead>
+            <tr><th>SKU</th><th>Producto</th><th>Talla</th><th>Sist.</th><th>Cont.</th><th>Dif.</th><th>Por</th><th></th></tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+        <div class="empty" id="emptyMsg">Todavía no registraste ningún conteo.</div>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-ghost" style="flex:1;" id="exportBtn">⬇ Exportar CSV</button>
+        <button class="btn btn-ghost" style="flex:1;" id="resetBtn">🗑 Reiniciar conteo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: METRICAS ===================== -->
+  <div class="page" id="page-metricas">
+    <div class="card chart-card">
+      <p class="chart-title">Resultado del conteo</p>
+      <div id="donutEmpty" class="chart-empty">Aún no hay conteos para graficar.</div>
+      <canvas id="donutChart" style="display:none;"></canvas>
+    </div>
+    <div class="card chart-card">
+      <p class="chart-title">Mayores faltantes detectados</p>
+      <div id="faltantesEmpty" class="chart-empty">Registrá conteos para ver los mayores faltantes.</div>
+      <canvas id="faltantesChart" style="display:none;"></canvas>
+    </div>
+    <div class="card chart-card">
+      <p class="chart-title">Avance del ciclo por marca</p>
+      <canvas id="brandChart"></canvas>
+    </div>
+    <div class="card chart-card">
+      <p class="chart-title">Avance del ciclo por modelo (top 10 por SKU)</p>
+      <canvas id="tipoChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE: USUARIOS (solo admin) ===================== -->
+  <div class="page" id="page-usuarios">
+    <div class="card">
+      <h2><span class="dot"></span>Crear nuevo usuario</h2>
+      <p class="hint" style="margin-top:-4px;">Administrador: control total, ve indicadores y gestiona usuarios. Responsable de stock / Usuario: acceso completo para hacer conteos, sin ver indicadores de gerencia.</p>
+      <div class="auth-error" id="userFormError"></div>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label">Usuario</label>
+          <input type="text" id="newUsername" placeholder="ej. jperez" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="field-label">Nombre completo</label>
+          <input type="text" id="newFullname" placeholder="Ej. Juan Pérez" autocomplete="off">
+        </div>
+        <div class="field">
+          <label class="field-label">Contraseña</label>
+          <input type="password" id="newPassword" placeholder="mínimo 4 caracteres" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label class="field-label">Perfil</label>
+          <select id="newRole">
+            <option value="admin">Administrador</option>
+            <option value="stock" selected>Responsable de stock</option>
+            <option value="usuario">Usuario</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-brass" id="createUserBtn">+ Crear usuario</button>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Usuarios registrados <span class="count-badge" id="usersCountBadge">0</span></h2>
+      <div id="usersTableWrap" style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr><th>N°</th><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>Actualizar catálogo de stock</h2>
+      <p class="hint" style="margin-top:-4px;">Importá el Excel/CSV actualizado de stock (mismo formato que exporta el sistema: Producto, Variante, Código Barras, SKU, Stock, Cantidad por Despachar, Marca, Tipo de Producto). Reemplaza el catálogo para todo el equipo — los conteos ya registrados no se borran.</p>
+      <div class="auth-error" id="importError"></div>
+      <div class="field">
+        <label class="field-label">Archivo (.xlsx o .csv)</label>
+        <input type="file" id="importFile" accept=".xlsx,.xls,.csv">
+      </div>
+      <button class="btn btn-brass" id="importStockBtn">⬆ Importar y reemplazar catálogo</button>
+      <p class="hint" id="importStatus" style="margin-top:10px;"></p>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <h2 style="margin:0;"><span class="dot"></span>Registrar conteo</h2>
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+    </div>
+    <p class="prod-title" id="pProducto">—</p>
+    <p class="prod-meta" id="pMeta">—</p>
+    <div class="prod-tags" id="pTags"></div>
+
+    <div class="grid2">
+      <div class="stat"><div class="k">Stock sistema</div><div class="v" id="pStock">0</div></div>
+      <div class="stat"><div class="k">Por despachar</div><div class="v" id="pDespachar">0</div></div>
+    </div>
+
+    <button type="button" class="loc-toggle" id="locToggle">+ Verificar ubicación (para ERU)</button>
+    <div class="loc-fields" id="locFields">
+      <div>
+        <label>Ubicación en sistema</label>
+        <input type="text" id="locSistema" placeholder="Ej. A-03-02" autocomplete="off">
+      </div>
+      <div>
+        <label>Ubicación física encontrada</label>
+        <input type="text" id="locFisica" placeholder="Ej. A-03-02" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="found-row">
+      <div class="stepper">
+        <button id="minusBtn" type="button">−</button>
+        <input type="number" id="foundInput" value="0" min="0">
+        <button id="plusBtn" type="button">+</button>
+      </div>
+      <button class="btn btn-ok" id="saveBtn" style="flex:1;">Registrar conteo</button>
+    </div>
+
+    <div class="diff-banner" id="diffBanner"></div>
+  </div>
+</div>
+
+<div class="tabnav">
+  <button class="tab-btn active" data-tab="criterio"><span class="ti">🎯</span><span class="tl">Criterio</span></button>
+  <button class="tab-btn" data-tab="diferencias"><span class="ti">⚖️</span><span class="tl">Diferencias</span></button>
+  <button class="tab-btn" data-tab="resultados"><span class="ti">📋</span><span class="tl">Resultados</span></button>
+  <button class="tab-btn" data-tab="metricas" id="tabBtnMetricas"><span class="ti">📊</span><span class="tl">Métricas</span></button>
+  <button class="tab-btn" data-tab="usuarios" id="tabBtnUsuarios" style="display:none;"><span class="ti">👤</span><span class="tl">Usuarios</span></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ===================== ALMACENAMIENTO (Supabase) =====================
+// Esta app corre fuera de Claude (hosteada en Netlify), así que reemplazamos
+// la API de almacenamiento de Claude por una implementación equivalente
+// que habla con Supabase (Postgres) por REST. El resto de la app no cambia:
+// sigue usando window.storage.get/set/delete exactamente igual.
+const SUPABASE_URL = 'https://hpgbwundvjubskohoczo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwZ2J3dW5kdmp1YnNrb2hvY3pvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDgwOTQsImV4cCI6MjEwMDMyNDA5NH0.ovgVsMBorvexJmsaeLzl6c63_kD0mPvi6lkrX2zdUwU';
+
+function localKey(key){ return 'ezzeta_' + key; }
+
+window.storage = {
+  async get(key, shared){
+    if(!shared){
+      const v = localStorage.getItem(localKey(key));
+      if(v === null) throw new Error('not found');
+      return { key, value: v, shared };
+    }
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}&select=value`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if(!res.ok) throw new Error('storage get failed');
+    const rows = await res.json();
+    if(!rows.length) throw new Error('not found');
+    return { key, value: rows[0].value, shared };
+  },
+  async set(key, value, shared){
+    if(!shared){
+      localStorage.setItem(localKey(key), value);
+      return { key, value, shared };
+    }
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/kv_store`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+    });
+    if(!res.ok) throw new Error('storage set failed');
+    return { key, value, shared };
+  },
+  async delete(key, shared){
+    if(!shared){
+      localStorage.removeItem(localKey(key));
+      return { key, deleted:true, shared };
+    }
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kv_store?key=eq.${encodeURIComponent(key)}`,
+      { method:'DELETE', headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if(!res.ok) throw new Error('storage delete failed');
+    return { key, deleted:true, shared };
+  },
+  async list(prefix, shared){
+    if(!shared){
+      const keys = Object.keys(localStorage).filter(k=>k.startsWith(localKey(prefix||''))).map(k=>k.replace('ezzeta_',''));
+      return { keys, prefix, shared };
+    }
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kv_store?key=like.${encodeURIComponent((prefix||'')+'*')}&select=key`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if(!res.ok) throw new Error('storage list failed');
+    const rows = await res.json();
+    return { keys: rows.map(r=>r.key), prefix, shared };
+  }
+};
+
+const PRODUCTS_DEFAULT = [["78449524189022","78449524189022","3 X 100  JEAN BAGGY CENIZO EZZETA","32",1,0,"EZZETA","JEAN"],["78010764845954","78010764845954","3 X 100 JEAN AZUL CLASICO EZZETA","28",2,0,"EZZETA","3X100"],["78103334257375","3X100-000210","3 X 100 JEAN BAGGY MAIZ EZZETA","28",1,0,"EZZETA","3 X 100"],["78103335583201","3X100-000211","3 X 100 JEAN BAGGY MAIZ EZZETA","30",1,0,"EZZETA","3 X 100"],["78103340385433","3X100-000212","3 X 100 JEAN BAGGY MAIZ EZZETA","32",3,0,"EZZETA","3 X 100"],["78103341799181","3X100-000213","3 X 100 JEAN BAGGY MAIZ EZZETA","34",2,0,"EZZETA","3 X 100"],["78103342879983","3X100-000214","3 X 100 JEAN BAGGY MAIZ EZZETA","36",1,0,"EZZETA","3 X 100"],["76896411906978","3x100-020","3 X 100 JEAN BAGGY NEGRO EZZETA","32",1,0,"EZZETA","3 X 100"],["77404524225358","3X100-O019","3 X 100 JEAN BAGGY PRIME GARGOLA","34",1,0,"EZZETA","3 X 100"],["77998288250512","77998288250512","3 X 100 JEAN BAGGY VINTAGE NEGRO","36",1,0,"EZZETA","3 X 100"],["78010748153533","78010748153533","3 X 100 JEAN CELESTE CLASICO EZZETA","36",1,0,"EZZETA","3X100"],["78010748599604","78010748599604","3 X 100 JEAN CELESTE CLASICO EZZETA","38",1,0,"EZZETA","3X100"],["78063973749020","3X100-000040","3 X 100 JEAN CLASSIC CENIZO EZZETA","34",1,0,"EZZETA","JEAN"],["78010756709660","78010756709660","3 X 100 JEAN HIELO CLASICO EZZETA","28",1,0,"EZZETA","3X100"],["78010757618086","78010757618086","3 X 100 JEAN HIELO CLASICO EZZETA","32",2,0,"EZZETA","3X100"],["78269616117583","78269616117583","3 X 100 JOGGER CLASSIC AMARILLO","L",2,0,"CREPANTE","JOGGER"],["78063974611306","3X100-000128","3 X 100 JOGGER CLASSIC AMARILLO","S",4,0,"CREPANTE","JOGGER"],["78269660833887","78269660833887","3 X 100 JOGGER CLASSIC BEIGE MAXETA","L",2,0,"MAXETA","3 X 100"],["77820328344809","3x100-00129","3 X 100 JOGGER CLASSIC BEIGE MAXETA","M",2,0,"MAXETA","3 X 100"],["78269663189312","78269663189312","3 X 100 JOGGER CLASSIC BEIGE MAXETA","XL",2,0,"MAXETA","3 X 100"],["78063974647721","3X100-000133","3 X 100 JOGGER CLASSIC GARGOLA","L",3,0,"CREPANTE","JOGGER"],["78063974639677","3X100-000132","3 X 100 JOGGER CLASSIC GARGOLA","M",2,0,"CREPANTE","JOGGER"],["78063974632346","3X100-000131","3 X 100 JOGGER CLASSIC GARGOLA","S",1,0,"CREPANTE","JOGGER"],["77820328368546","3x100-00132","3 X 100 JOGGER CLASSIC MELANGE  MAXETA","L",2,0,"MAXETA","3 X 100"],["78269627580486","78269627580486","3 X 100 JOGGER CLASSIC NEGRO MAXETA","S",4,1,"MAXETA","3 X 100"],["78190426593041","3x100-0050","3 X 100 JOGGER CLASSIC PERLA MAXETA","L",1,0,"MAXETA","3 X 100"],["77820328408418","3x100-00140","3 X 100 JOGGER CLASSIC PERLA MAXETA","M",3,0,"MAXETA","3 X 100"],["77820328398501","3x100-00135","3 X 100 JOGGER CLASSIC PERLA MAXETA","S",3,0,"MAXETA","3 X 100"],["77820328403310","3x100-00136","3 X 100 JOGGER CLASSIC PERLA MAXETA","XL",1,0,"MAXETA","3 X 100"],["78063974739438","3X100-000150","3 X 100 JOGGER FOREST BLACK MAXETA","L",3,0,"MAXETA","JOGGER"],["78063974732963","3X100-000149","3 X 100 JOGGER FOREST BLACK MAXETA","S",1,0,"MAXETA","JOGGER"],["78063974740759","3X100-000146","3 X 100 JOGGER FOREST VERDE MAXETA","M",1,0,"MAXETA","JOGGER"],["78063974734790","3X100-000145","3 X 100 JOGGER FOREST VERDE MAXETA","S",2,0,"MAXETA","JOGGER"],["78063974710293","3X100-000143","3 X 100 JOGGER WASH BEIGE MAXETA","S",1,0,"MAXETA","JOGGER"],["78063974674098","3X100-000138","3 X 100 JOGGER WASH PLOMO MAXETA","L",3,0,"MAXETA","JOGGER"],["78063974682710","3X100-000139","3 X 100 JOGGER WASH PLOMO MAXETA","XL",1,0,"MAXETA","JOGGER"],["78102793849139","3X100-0044","3 X 100 MOM JEAN CELESTE 2.0 EZZETA","30",1,0,"EZZETA","3 X 100"],["78102795919083","3X100-0045","3 X 100 MOM JEAN CELESTE 2.0 EZZETA","32",1,0,"EZZETA","3 X 100"],["78103313271045","3X100-000208","3 X 100 MOM JEAN CENIZO 2.0 EZZETA","30",3,0,"EZZETA","JEAN"],["78063973523189","3X100-000023","3 X 100 MOM JEAN CENIZO 2.0 EZZETA","32",1,0,"EZZETA","JEAN"],["78063973633745","3X100-000028","3 X 100 MOM JEAN COW CREPANTE","28",3,0,"CREPANTE","JEAN"],["78063973639492","3X100-000029","3 X 100 MOM JEAN COW CREPANTE","30",7,0,"CREPANTE","JEAN"],["78063973644605","3X100-000030","3 X 100 MOM JEAN COW CREPANTE","32",6,0,"CREPANTE","JEAN"],["78063973650177","3X100-000031","3 X 100 MOM JEAN COW CREPANTE","34",3,0,"CREPANTE","JEAN"],["78063973655379","3X100-000032","3 X 100 MOM JEAN COW CREPANTE","36",2,0,"CREPANTE","JEAN"],["78449476663361","78449476663361","3 X 100 MOM JEAN CRYSTAL BLACK CREPANTE","32",1,0,"CREPANTE","3X100"],["78449478075028","78449478075028","3 X 100 MOM JEAN CRYSTAL BLACK CREPANTE","34",1,0,"CREPANTE","3X100"],["78103297127399","3X100-000205","3 X 100 MOM JEAN FOCAL BLACK","28",2,0,"EZZETA","3 X 100"],["77785662749828","ÑÑÑÑÑÑÑ","3 X 100 MOM JEAN FOCAL BLACK","32",1,0,"EZZETA","3 X 100"],["76896411989380","3x100-039","3 X 100 MOM JEAN FOCAL BLUE EZZETA","28",2,0,"EZZETA","3 X 100"],["76896411998105","3x100-040","3 X 100 MOM JEAN FOCAL BLUE EZZETA","30",5,0,"EZZETA","3 X 100"],["78070364013501","78070364013501","3 X 100 MOM JEAN FOCAL BLUE EZZETA","32",5,0,"EZZETA","3 X 100"],["78269860298708","78269860298708","3 X 100 MOM JEAN FOCAL BLUE EZZETA","34",1,0,"EZZETA","3 X 100"],["78269861057196","78269861057196","3 X 100 MOM JEAN FOCAL BLUE EZZETA","36",1,0,"EZZETA","3 X 100"],["78063973380969","3X100-000009","3 X 100 MOM JEAN GREY EZZETA","28",2,0,"EZZETA","3 X 100"],["78063973391605","3X100-000010","3 X 100 MOM JEAN GREY EZZETA","30",1,0,"EZZETA","3 X 100"],["78063973397470","3X100-000011","3 X 100 MOM JEAN GREY EZZETA","32",2,0,"EZZETA","3 X 100"],["78102772789971","3X100-0040","3 X 100 MOM JEAN HIELO 2.0 EZZETA","28",1,0,"EZZETA","3 X 100"],["78102775277689","3X100-0041","3 X 100 MOM JEAN HIELO 2.0 EZZETA","32",1,0,"EZZETA","3 X 100"],["78010821068886","78010821068886","3 X 100 MOM JEAN ICE","30",1,0,"CREPANTE","3 X 100"],["78010822718986","78010822718986","3 X 100 MOM JEAN ICE","32",5,0,"CREPANTE","3 X 100"],["77897710641628","77897710641628","3 X 100 MOM JEAN ICE","36",2,0,"CREPANTE","3 X 100"],["78010797380419","78010797380419","3 X 100 MOM JEAN LIL BLACK CREPANTE","28",3,0,"CREPANTE","3X100"],["78010799202462","78010799202462","3 X 100 MOM JEAN LIL BLACK CREPANTE","32",1,0,"CREPANTE","3X100"],["78010799556714","78010799556714","3 X 100 MOM JEAN LIL BLACK CREPANTE","34",2,0,"CREPANTE","3X100"],["78063973374389","3X100-000014","3 X 100 MOM JEAN LIL BLUE CREPANTE","30",1,0,"CREPANTE","JEAN"],["78063973388364","3X100-000015","3 X 100 MOM JEAN LIL BLUE CREPANTE","32",2,0,"CREPANTE","JEAN"],["78063973393497","3X100-000016","3 X 100 MOM JEAN LIL BLUE CREPANTE","36",1,0,"CREPANTE","JEAN"],["78063973620786","3X100-000034","3 X 100 MOM JEAN ROUGH GREY CREPANTE","36",1,0,"CREPANTE","JEAN"],["77820328151387","3x100-00100","3 X 100 MOM JEAN SILVER CREPANTE","28",3,0,"CREPANTE","3 X 100"],["78070289964662","78070289964662","3 X 100 MOM JEAN SILVER CREPANTE","30",2,0,"CREPANTE","3 X 100"],["78103254954462","3X100-000202","3 X 100 MOM JEAN SILVER CREPANTE","32",2,0,"CREPANTE","3 X 100"],["77820328159950","3x100-00102","3 X 100 MOM JEAN SILVER CREPANTE","36",2,0,"CREPANTE","3 X 100"],["78010740521796","78010740521796","3 X 100 MOM JEAN SKY BLUE EZZETA","28",2,0,"EZZETA","3 X 100"],["78070275357673","78070275357673","3 X 100 MOM JEAN SKY BLUE EZZETA","36",3,0,"EZZETA","3 X 100"],["78063974535988","3X100-000121","3 X 100 POLERA BASICA ACERO EZZETA","S",1,0,"EZZETA","POLERAS"],["78063974463494","3X100-000111","3 X 100 POLERA BASICA BLANCO EZZETA","L",1,0,"EZZETA","POLERAS"],["78063974522537","3X100-000120","3 X 100 POLERA BASICA DENIM EZZETA","L",3,0,"EZZETA","POLERAS"],["78063974516152","3X100-000119","3 X 100 POLERA BASICA DENIM EZZETA","M",3,0,"EZZETA","POLERAS"],["78063974480838","3X100-000112","3 X 100 POLERA BASICA GARGOLA EZZETA","S",1,0,"EZZETA","POLERAS"],["78063974499753","3X100-000114","3 X 100 POLERA BASICA GARGOLA EZZETA","XL",4,0,"EZZETA","POLERAS"],["78063974423888","3X100-000106","3 X 100 POLERA BASICA MELANGE EZZETA","L",1,0,"EZZETA","POLERAS"],["78063974417049","3X100-000105","3 X 100 POLERA BASICA MELANGE EZZETA","M",3,0,"EZZETA","POLERAS"],["78063974411633","3X100-000104","3 X 100 POLERA BASICA MELANGE EZZETA","S",6,0,"EZZETA","POLERAS"],["78063974431687","3X100-000107","3 X 100 POLERA BASICA MELANGE EZZETA","XL",2,0,"EZZETA","POLERAS"],["78063974481320","3X100-000115","3 X 100 POLERA BASICA VERDE EZZETA","S",1,0,"EZZETA","POLERAS"],["78063974493612","3X100-000117","3 X 100 POLERA BASICA VERDE EZZETA","XL",1,0,"EZZETA","POLERAS"],["78063974355402","3X100-000099","3 X 100 POLERA CANGURO ACERO EZZETA","L",1,0,"EZZETA","POLERAS"],["78063974349045","3X100-000098","3 X 100 POLERA CANGURO ACERO EZZETA","M",3,0,"EZZETA","POLERAS"],["78063974417197","3X100-000102","3 X 100 POLERA CANGURO BLANCO EZZETA","L",3,0,"EZZETA","POLERAS"],["78063974411630","3X100-000101","3 X 100 POLERA CANGURO BLANCO EZZETA","M",3,0,"EZZETA","POLERAS"],["78063974403780","3X100-000100","3 X 100 POLERA CANGURO BLANCO EZZETA","S",1,0,"EZZETA","POLERAS"],["78063974423407","3X100-000103","3 X 100 POLERA CANGURO BLANCO EZZETA","XL",1,0,"EZZETA","POLERAS"],["78063974255924","3X100-000093","3 X 100 POLERA CANGURO DENIM EZZETA","L",2,0,"EZZETA","POLERAS"],["78063974244932","3X100-000092","3 X 100 POLERA CANGURO DENIM EZZETA","M",10,0,"EZZETA","POLERAS"],["78063974258886","3X100-000090","3 X 100 POLERA CANGURO GARGOLA EZZETA","L",1,0,"EZZETA","POLERAS"],["78063974248429","3X100-000089","3 X 100 POLERA CANGURO GARGOLA EZZETA","M",1,0,"EZZETA","POLERAS"],["78063974342116","3X100-000095","3 X 100 POLERA CANGURO MELANGE EZZETA","XL",2,0,"EZZETA","POLERAS"],["78010622180581","78010622180581","3 X 100 POLERA CLASSIC BEIGE MAXETA","M",2,0,"MAXETA","3X100"],["78010616860131","78010616860131","3 X 100 POLERA CLASSIC MELANGE MAXETA","L",1,0,"MAXETA","3X100"],["78010616299644","78010616299644","3 X 100 POLERA CLASSIC MELANGE MAXETA","M",2,0,"MAXETA","3X100"],["78010684622428","78010684622428","3 X 100 POLERA CLASSIC NEGRO MAXETA","S",2,0,"MAXETA","3X100"],["78010725944520","78010725944520","3 X 100 POLERA CR MELANGE EZZETA","M",2,0,"EZZETA","3X100"],["78010725468697","78010725468697","3 X 100 POLERA CR MELANGE EZZETA","S",1,0,"EZZETA","3X100"],["77820328339501","3x100-00126","3 X 100 POLERA CRYSTAL WHITE CREPANTE","L",1,0,"CREPANTE","3 X 100"],["77820328335642","3x100-00125","3 X 100 POLERA CRYSTAL WHITE CREPANTE","M",12,0,"CREPANTE","3 X 100"],["77820328343219","3x100-00127","3 X 100 POLERA CRYSTAL WHITE CREPANTE","XL",2,0,"CREPANTE","3 X 100"],["78063974079881","3X100-000081","3 X 100 POLO BARRIDO CREPANTE","M",1,0,"CREPANTE","POLO"],["78063974026381","3X100-000078","3 X 100 POLO CROWN OF ASH NEGRO CREPANTE","L",3,0,"CREPANTE","POLO"],["76896412235969","3x100-084","3 x 100 POLO CROWN OF THORNS PLOMO","L",3,0,"CREPANTE","3 X 100"],["76896412231455","3x100-083","3 x 100 POLO CROWN OF THORNS PLOMO","M",6,0,"CREPANTE","3 X 100"],["76896412239684","3x100-085","3 x 100 POLO CROWN OF THORNS PLOMO","XL",4,0,"CREPANTE","3 X 100"],["78269581579770","78269581579770","3 X 100 POLO EXPLOSIVE EZZETA","L",11,0,"EZZETA","3 X 100"],["76896412110959","3x100-056","3 X 100 POLO FUEGO SAGRADO PLOMO CREPANTE","M",2,0,"CREPANTE","3 X 100"],["78010476944079","78010476944079","3 X 100 POLO LUXURY ARENA","L",2,0,"UOMO CATTIVO","3X100"],["78010476456732","78010476456732","3 X 100 POLO LUXURY ARENA","M",5,0,"UOMO CATTIVO","3X100"],["78010502394028","78010502394028","3 X 100 POLO LUXURY BLANCO","L",3,0,"UOMO CATTIVO","3X100"],["78010501950649","78010501950649","3 X 100 POLO LUXURY BLANCO","M",2,0,"UOMO CATTIVO","3X100"],["78010501527116","78010501527116","3 X 100 POLO LUXURY BLANCO","S",1,0,"UOMO CATTIVO","3X100"],["78010502812626","78010502812626","3 X 100 POLO LUXURY BLANCO","XL",4,0,"UOMO CATTIVO","3X100"],["78010468119894","78010468119894","3 X 100 POLO LUXURY MARRON","L",1,0,"UOMO CATTIVO","3X100"],["78010209472556","78010209472556","3 X 100 POLO LUXURY NEGRO","S",3,0,"UOMO CATTIVO","3X100"],["76896412063308","3x100-049","3 X 100 POLO MEMBERS ONLY PLOMO CREPANTE","M",1,0,"CREPANTE","3 X 100"],["76896412070753","3x100-051","3 X 100 POLO MEMBERS ONLY PLOMO CREPANTE","XL",1,0,"CREPANTE","3 X 100"],["76896412114623","3x100-062","3 X 100 POLO NEVER BACK DOWN BEIGE","L",1,0,"CREPANTE","3 X 100"],["76896412111213","3x100-061","3 X 100 POLO NEVER BACK DOWN BEIGE","S",1,0,"CREPANTE","3 X 100"],["76896412266780","3x100-088","3 X 100 POLO PLOMO BARRIDO CREPANTE","L",1,0,"CREPANTE","3 X 100"],["76896412270468","3x100-089","3 X 100 POLO PLOMO BARRIDO CREPANTE","XL",1,0,"CREPANTE","3 X 100"],["76896412135382","3x100-063","3 X 100 POLO PLUS WASH MAXETA VERDE","M",1,0,"MAXETA","3 X 100"],["77404524106314","3X100-O001","3 X 100 POLO PRIME ACERO","XL",3,0,"UOMO CATTIVO","3 X 100"],["78063973881728","3X100-000049","3 X 100 POLO PRIME ACERO UOMO","L",1,0,"UOMO","POLO"],["78063973876279","3X100-000048","3 X 100 POLO PRIME ACERO UOMO","M",3,0,"UOMO","POLO"],["78063973850082","3X100-000047","3 X 100 POLO PRIME ACERO UOMO UOMO","S",3,0,"UOMO","POLO"],["78063973902355","3X100-000050","3 X 100 POLO PRIME BLANCO UOMO","S",9,0,"UOMO","POLO"],["78063973918100","3X100-000052","3 X 100 POLO PRIME BLANCO UOMO","XL",2,0,"UOMO","POLO"],["78063973927551","3X100-000055","3 X 100 POLO PRIME NEGRO UOMO","L",20,0,"UOMO","POLO"],["78063973922166","3X100-000054","3 X 100 POLO PRIME NEGRO UOMO","M",1,0,"UOMO","POLO"],["78063973916576","3X100-000053","3 X 100 POLO PRIME NEGRO UOMO","S",4,0,"UOMO","POLO"],["78063973932907","3X100-000056","3 X 100 POLO PRIME NEGRO UOMO","XL",4,0,"UOMO","POLO"],["78063973936146","3X100-000057","3 X 100 POLO PRIME V BLANCO UOMO","S",1,0,"UOMO","POLO"],["76896412186060","3x100-070","3 X 100 POLO SKULLD PLOMO EZZETA","L",42,0,"EZZETA","3 X 100"],["76896412180643","3x100-069","3 X 100 POLO SKULLD PLOMO EZZETA","M",23,0,"EZZETA","3 X 100"],["76896412176276","3x100-068","3 X 100 POLO SKULLD PLOMO EZZETA","S",4,0,"EZZETA","3 X 100"],["76896412190754","3x100-071","3 X 100 POLO SKULLD PLOMO EZZETA","XL",3,0,"EZZETA","3 X 100"],["76896412162368","3x100-066","3 X 100 POLO STREET MONEY NEGRO CREPANTE","L",1,0,"CREPANTE","3 X 100"],["76896412157667","3x100-065","3 X 100 POLO STREET MONEY NEGRO CREPANTE","M",1,0,"CREPANTE","3 X 100"],["76896412217695","3x100-077","3 X 100 POLO STREET SCARS ARENA EZZETA","L",11,0,"EZZETA","3 X 100"],["76896412212406","3x100-076","3 X 100 POLO STREET SCARS ARENA EZZETA","M",11,0,"EZZETA","3 X 100"],["76896412222481","3x100-078","3 X 100 POLO STREET SCARS ARENA EZZETA","XL",1,0,"EZZETA","3 X 100"],["77404524349482","3X100-O035","3 X 100 SHORT JEAN CENIZO","34",3,0,"EZZETA","3 X 100"],["77404524339065","3X100-O033","3 X 100 SHORT JEAN CENIZO","36",1,0,"EZZETA","3 X 100"],["78286678208472","3X100-L071","3X100 CASACA BASICA BLANCA EZZETA","L",1,0,"EZZETA","3X100"],["78286678241862","3X100-L074","3X100 JEAN BAGGY NEGRO EZZETA","34",1,0,"EZZETA","3X100"],["78270457610336","3X100-LI008","3x100 JEAN BAGGY VINTAGE AZUL EZZETA","32",1,0,"EZZETA","3X100"],["78270457609431","3X100-LI009","3x100 JOGGER BAGGY PRIME CEMENTO EZZETA","32",1,0,"EZZETA","3X100"],["78270457711137","3X100-LI019","3x100 JOGGER CLASSIC AMARILLO MAXETA","L",1,0,"MAXETA","3X100"],["78270457705668","3X100-LI018","3x100 JOGGER CLASSIC AMARILLO MAXETA","S",1,0,"MAXETA","3X100"],["78270457742426","3X100-LI024","3x100 JOGGER CLASSIC BEIGE MAXETA","L",1,0,"MAXETA","3X100"],["78270457746147","3X100-LI025","3x100 JOGGER CLASSIC BEIGE MAXETA","XL",2,0,"MAXETA","3X100"],["78270457734960","3X100-LI023","3x100 JOGGER CLASSIC MELANGE MAXETA","S",1,0,"MAXETA","3X100"],["78270457637638","3X100-LI010","3x100 JOGGER CLASSIC NEGRO MAXETA","S",1,0,"MAXETA","3X100"],["78270457723997","3X100-LI022","3x100 JOGGER CLASSIC VERDE MAXETA","L",1,0,"MAXETA","3X100"],["78270457719502","3X100-LI021","3x100 JOGGER CLASSIC VERDE MAXETA","M",1,0,"MAXETA","3X100"],["78270457715196","3X100-LI020","3x100 JOGGER CLASSIC VERDE MAXETA","S",3,1,"MAXETA","3X100"],["78270457986651","3X100-LI058","3x100 JOGGER CRYSTAL BLACK CREPANTE","M",1,0,"CREPANTE","3X100"],["78270457639461","3X100-LI011","3x100 JOGGER WASH PLOMO MAXETA","M",1,0,"MAXETA","3X100"],["78270457897714","3X100-LI048","3x100 MOM JEAN BROWN CREPANTE","34",2,0,"CREPANTE","3X100"],["78270457902771","3X100-LI049","3x100 MOM JEAN BROWN CREPANTE","36",1,0,"CREPANTE","3X100"],["78270457579844","3X100-LI005","3x100 MOM JEAN COW CREPANTE","30",1,0,"CREPANTE","3X100"],["78270457880568","3X100-LI042","3x100 MOM JEAN CRYSTAL BLUE CREPANTE","28",1,0,"CREPANTE","3X100"],["78270457891382","3X100-LI044","3x100 MOM JEAN CRYSTAL BLUE CREPANTE","34",1,0,"CREPANTE","3X100"],["78286678242065","3X100-L075","3x100 MOM JEAN CRYSTAL BLUE CREPANTE","36",1,0,"CREPANTE","3X100"],["78270457962793","3X100-LI056","3x100 MOM JEAN FOCAL BLUE EZZETA","34",1,0,"EZZETA","3X100"],["78270457580282","3X100-LI006","3x100 MOM JEAN HIELO 2.0 EZZETA","34",1,0,"EZZETA","3X100"],["78270458052776","3X100-LI065","3x100 MOM JEAN HIELO ROCK CREPANTE","28",1,0,"CREPANTE","3X100"],["78270458057755","3X100-LI066","3x100 MOM JEAN HIELO ROCK CREPANTE","30",6,0,"CREPANTE","3X100"],["78270458063176","3X100-LI067","3x100 MOM JEAN HIELO ROCK CREPANTE","32",11,0,"CREPANTE","3X100"],["78270458067885","3X100-LI068","3x100 MOM JEAN HIELO ROCK CREPANTE","34",6,0,"CREPANTE","3X100"],["78287191841140","78287191841140","3x100 MOM JEAN HIELO ROCK CREPANTE","36",6,0,"CREPANTE","3X100"],["78286678271960","3X100-L076","3x100 MOM JEAN ICE CREPANTE","34",1,0,"CREPANTE","3X100"],["78270457921460","3X100-LI050","3x100 MOM JEAN MAIZ CRYSTAL CREPANTE","34",3,0,"CREPANTE","3X100"],["78286678272723","3X100-L077","3x100 MOM JEAN MAIZ CRYSTAL CREPANTE","36",3,0,"CREPANTE","3X100"],["78270457882109","3X100-LI045","3x100 MOM JEAN MAIZ DSTR CREPANTE","30",1,0,"CREPANTE","3X100"],["78270457886925","3X100-LI046","3x100 MOM JEAN MAIZ DSTR CREPANTE","32",1,0,"CREPANTE","3X100"],["78270457890976","3X100-LI047","3x100 MOM JEAN MAIZ DSTR CREPANTE","36",1,0,"CREPANTE","3X100"],["78270457552033","3X100-LI003","3X100 MOM JEAN ROUGH GREY CREPANTE","32",1,0,"CREPANTE","3X100"],["78270457551409","3X100-LI002","3x100 MOM JEAN SHADOW FIT CREPANTE","36",1,0,"CREPANTE","3X100"],["78270457577845","3X100-LI004","3x100 MOM JEAN SILVER CREPANTE","32",1,0,"CREPANTE","3X100"],["78270457550690","3X100-LI001","3x100 MOM JEAN STREET ASH CREPANTE","36",1,0,"CREPANTE","3X100"],["78270457949388","3X100-LI053","3x100 PANTALON CLASICO BEIGE UOMO CATTIVO","L",1,0,"UOMO CATTIVO","3X100"],["78270457957224","3X100-LI055","3x100 PANTALON CLASICO HUESO UOMO CATTIVO","L",2,0,"UOMO CATTIVO","3X100"],["78270457953261","3X100-LI054","3x100 PANTALON CLASICO HUESO UOMO CATTIVO","S",1,0,"UOMO CATTIVO","3X100"],["78337348155583","78337348155583","3X100 PANTALON CLASICO NEGRO CATTIVO","L",1,0,"UOMO CATTIVO","3X100"],["78337347066623","78337347066623","3X100 PANTALON CLASICO NEGRO CATTIVO","S",1,0,"UOMO CATTIVO","3X100"],["78270457934750","3X100-LI052","3x100 PANTALON CLASICO PLOMO CLARO UOMO CATTIVO","L",1,0,"UOMO CATTIVO","3X100"],["78270457918688","3X100-LI051","3x100 PANTALON CLASICO PLOMO RATA UOMO CATTIVO","L",4,0,"UOMO CATTIVO","3X100"],["78286678209160","3X100-L070","3X100 POLERA BASICA BLANCO EZZETA","M",1,0,"EZZETA","3X100"],["78270457670862","3X100-LI013","3x100 POLERA BASICA GARGOLA EZZETA","L",1,0,"EZZETA","3X100"],["78270457677439","3X100-LI059","3x100 POLERA BASICA GARGOLA EZZETA","L",1,0,"EZZETA","3X100"],["78270457993228","3X100-LI060","3x100 POLERA CANGURO BLANCO EZZETA","L",1,0,"EZZETA","3X100"],["78286678237581","3X100-L073","3x100 POLERA CANGURO GARGOLA EZZETA","L",1,0,"EZZETA","3X100"],["78270457825889","3X100-LI035","3x100 POLERA CLASSIC AMARILLO MAXETA","L",1,0,"MAXETA","3X100"],["78450412878786","78450412878786","3x100 POLERA CLASSIC AMARILLO MAXETA","M",1,0,"MAXETA","3X100"],["78270457639577","3X100-LI012","3x100 POLERA CLASSIC MELANGE MAXETA","M",1,0,"MAXETA","3X100"],["78286678208723","3X100-L069","3X100 POLERA CLASSIC PERLA MAXETA","S",1,0,"MAXETA","3X100"],["78270457670045","3X100-LI015","3x100 POLERA CR VERDE EZZETA","M",1,0,"EZZETA","3X100"],["78270457706272","3X100-LI017","3x100 POLERA CRYSTAL BLACK CREPANTE","L",3,0,"CREPANTE","3X100"],["78270457701398","3X100-LI016","3x100 POLERA CRYSTAL BLACK CREPANTE","M",1,0,"CREPANTE","3X100"],["78270458048272","3X100-LI064","3x100 POLERA CRYSTAL WHITE CREPANTE","L",1,0,"CREPANTE","3X100"],["78270458044242","3X100-LI063","3x100 POLERA CRYSTAL WHITE CREPANTE","M",1,0,"CREPANTE","3X100"],["78270458040294","3X100-LI062","3x100 POLERA CRYSTAL WHITE CREPANTE","S",1,0,"CREPANTE","3X100"],["78270458026202","3X100-LI061","3x100 POLERA FOREST VERDE MAXETA","M",1,0,"MAXETA","3X100"],["78071594451645","3x100-451645","3X100 POLERA SET DRIP NEGRO","M",1,0,"CREPANTE","3X100"],["78270457863669","3X100-LI041","3x100 POLO CHALECO ACID WASH PLOMO CLARO MAXETA","L",1,0,"MAXETA","3X100"],["78270457859702","3X100-LI040","3x100 POLO CHALECO ACID WASH PLOMO CLARO MAXETA","S",1,0,"MAXETA","3X100"],["78270457846621","3X100-LI038","3x100 POLO LUXURY GREY UOMO CATTIVO","L",1,0,"UOMO CATTIVO","3X100"],["78270457836707","3X100-LI036","3x100 POLO LUXURY GREY UOMO CATTIVO","S",1,0,"UOMO CATTIVO","3X100"],["78270457774274","3X100-LI030","3x100 POLO PRIME ACERO UOMO CATTIVO","S",2,0,"UOMO CATTIVO","3X100"],["78337240765341","78337240765341","3X100 POLO PRIME ARENA UOMO CATTIVO","L",1,0,"UOMO","3X100"],["78337238165688","78337238165688","3X100 POLO PRIME ARENA UOMO CATTIVO","M",4,0,"UOMO","3X100"],["78337235375721","78337235375721","3X100 POLO PRIME ARENA UOMO CATTIVO","S",1,0,"UOMO","3X100"],["78337244296449","78337244296449","3X100 POLO PRIME ARENA UOMO CATTIVO","XL",4,0,"UOMO","3X100"],["78270457795018","3X100-LI031","3x100 POLO PRIME BLANCO UOMO CATTIVO","XL",3,0,"UOMO CATTIVO","3X100"],["78071594424215","3x100-242159","3X100 POLO PRIME CAMEL","L",1,0,"UOMO CATTIVO","3X100"],["78270457764489","3X100-LI027","3x100 POLO PRIME CAMELL UOMO CATTIVO","L",3,0,"UOMO CATTIVO","3X100"],["78270457760599","3X100-LI026","3x100 POLO PRIME CAMELL UOMO CATTIVO","M",8,0,"UOMO CATTIVO","3X100"],["78270457768435","3X100-LI028","3x100 POLO PRIME CAMELL UOMO CATTIVO","XL",2,0,"UOMO CATTIVO","3X100"],["78071594423924","3x100-239247","3X100 POLO PRIME CEMENTO","L",3,0,"UOMO CATTIVO","3X100"],["78156036541172","3X100-O004","3X100 POLO PRIME CEMENTO","S",15,0,"UOMO CATTIVO","3X100"],["78270457764798","3X100-LI029","3x100 POLO PRIME CEMENTO UOMO CATTIVO","XL",2,0,"UOMO CATTIVO","3X100"],["78337303261427","78337303261427","3X100 POLO PRIME MELANGE UOMO CATTIVO","L",4,0,"UOMO CATTIVO","3X100"],["78337302213164","78337302213164","3X100 POLO PRIME MELANGE UOMO CATTIVO","M",6,0,"UOMO CATTIVO","3X100"],["78337296549982","78337296549982","3X100 POLO PRIME MELANGE UOMO CATTIVO","S",3,0,"UOMO CATTIVO","3X100"],["78337307274456","78337307274456","3X100 POLO PRIME MELANGE UOMO CATTIVO","XL",1,0,"UOMO CATTIVO","3X100"],["78337266995216","78337266995216","3X100 POLO PRIME MELON UOMO CATTIVO","L",2,0,"UOMO CATTIVO","3X100"],["78337266415831","78337266415831","3X100 POLO PRIME MELON UOMO CATTIVO","M",3,0,"UOMO CATTIVO","3X100"],["78337265730851","78337265730851","3X100 POLO PRIME MELON UOMO CATTIVO","S",2,0,"UOMO CATTIVO","3X100"],["78337267702331","78337267702331","3X100 POLO PRIME MELON UOMO CATTIVO","XL",1,0,"UOMO CATTIVO","3X100"],["78270457799313","3X100-LI032","3x100 POLO PRIME V ACERO UOMO CATTIVO","S",1,0,"UOMO CATTIVO","3X100"],["78270457809443","3X100-LI033","3x100 POLO PRIME V BLANCO UOMO CATTIVO","S",1,0,"UOMO CATTIVO","3X100"],["78270457814833","3X100-LI034","3x100 POLO PRIME V BLANCO UOMO CATTIVO","XL",1,0,"UOMO CATTIVO","3X100"],["78337322936788","78337322936788","3X100 POLO PRIME V MELANGE UOMO CATTIVO","L",7,0,"UOMO CATTIVO","3X100"],["78337319943112","78337319943112","3X100 POLO PRIME V MELANGE UOMO CATTIVO","M",4,0,"UOMO CATTIVO","3X100"],["78337325110116","78337325110116","3X100 POLO PRIME V MELANGE UOMO CATTIVO","XL",4,0,"UOMO CATTIVO","3X100"],["74605307999752","M00310","BVD FOCUS BEIGE MAXETA","XL",23,0,"MAXETA","BVD"],["74605307948714","M00298","BVD FOCUS BLANCO MAXETA","XL",8,0,"MAXETA","BVD"],["74605307946847","M00302","BVD FOCUS MELANGE MAXETA","XL",8,0,"MAXETA","BVD"],["74605307908483","M00294","BVD FOCUS NEGRO MAXETA","XL",4,0,"MAXETA","BVD"],["74605307891687","M00290","BVD FOX BEIGE MAXETA","XL",9,0,"MAXETA","BVD"],["74605307833227","M00278","BVD FOX BLANCO MAXETA","XL",26,0,"MAXETA","BVD"],["74605307889733","M00286","BVD FOX GARGOLA MAXETA","XL",21,0,"MAXETA","BVD"],["74605308087289","M00328","BVD GYM RAT BEIGE MAXETA","M",3,0,"MAXETA","BVD"],["74605308096772","M00330","BVD GYM RAT BEIGE MAXETA","XL",20,0,"MAXETA","BVD"],["74605308026589","M00318","BVD GYM RAT BLANCO MAXETA","XL",28,0,"MAXETA","BVD"],["74605308066896","M00324","BVD GYM RAT GARGOLA MAXETA","M",4,0,"MAXETA","BVD"],["74605308075726","M00326","BVD GYM RAT GARGOLA MAXETA","XL",5,0,"MAXETA","BVD"],["74605308051005","M00321","BVD GYM RAT MELANGE MAXETA","L",6,0,"MAXETA","BVD"],["74605308056193","M00322","BVD GYM RAT MELANGE MAXETA","XL",23,0,"MAXETA","BVD"],["74605307602314","M00229","BVD OLIMPICO BEIGE MAXETA","L",14,0,"MAXETA","BVD"],["74605307607504","M00230","BVD OLIMPICO BEIGE MAXETA","XL",34,0,"MAXETA","BVD"],["74605307545358","M00217","BVD OLIMPICO BLANCO MAXETA","L",1,0,"MAXETA","BVD"],["74605307549408","M00218","BVD OLIMPICO BLANCO MAXETA","XL",76,0,"MAXETA","BVD"],["74605307601870","M00226","BVD OLIMPICO GARGOLA MAXETA","XL",41,0,"MAXETA","BVD"],["74605307553794","M00221","BVD OLIMPICO MELANGE MAXETA","L",7,0,"MAXETA","BVD"],["74605307558129","M00222","BVD OLIMPICO MELANGE MAXETA","XL",65,0,"MAXETA","BVD"],["74605307785646","M00270","BVD OLIMPICO POWER FIT BEIGE MAXETA","XL",14,0,"MAXETA","BVD"],["74812057296777","M00873","BVD OLIMPICO WARRIOR BEIGE MAXETA","L",1,0,"MAXETA","BVD"],["74812057301551","M00874","BVD OLIMPICO WARRIOR BEIGE MAXETA","XL",40,0,"MAXETA","BVD"],["74812057260140","M00871","BVD OLIMPICO WARRIOR BLANCO MAXETA","XL",33,0,"MAXETA","BVD"],["74812057248589","M00865","BVD OLIMPICO WARRIOR GARGOLA MAXETA","XL",32,0,"MAXETA","BVD"],["74812057298661","M00876","BVD OLIMPICO WARRIOR MELANGE MAXETA","L",1,0,"MAXETA","BVD"],["74812057303124","M00877","BVD OLIMPICO WARRIOR MELANGE MAXETA","XL",38,0,"MAXETA","BVD"],["74812057248288","M00868","BVD OLIMPICO WARRIOR NEGRO MAXETA","XL",2,0,"MAXETA","BVD"],["74605307437149","M00195","BVD OLIMPYA  BEIGE MAXETA","L",1,0,"MAXETA","BVD"],["74605307425287","M00193","BVD OLIMPYA  BEIGE MAXETA","S",1,0,"MAXETA","BVD"],["74605307514446","M00210","BVD OLIMPYA POWER FIT BEIGE MAXETA","L",9,0,"MAXETA","BVD"],["74605307486442","M00204","BVD OLIMPYA POWER FIT MELANGE MAXETA","L",14,0,"MAXETA","BVD"],["74605307461100","M00198","BVD OLIMPYA POWER FIT NEGRO MAXETA","L",3,0,"MAXETA","BVD"],["74812057352833","M00883","BVD OLYMPIA NIGHT BEIGE MAXETA","L",52,0,"MAXETA","BVD"],["74812057346770","M00882","BVD OLYMPIA NIGHT BEIGE MAXETA","M",22,0,"MAXETA","BVD"],["74818509760177","M00901","BVD OLYMPIA NIGHT BLANCO MAXETA","L",10,0,"MAXETA","BVD"],["74818509754712","M00900","BVD OLYMPIA NIGHT BLANCO MAXETA","M",1,0,"MAXETA","BVD"],["74818509751270","M00902","BVD OLYMPIA NIGHT GARGOLA MAXETA","S",1,0,"MAXETA","BVD"],["74818509760085","M00898","BVD OLYMPIA NIGHT MELANGE MAXETA","L",15,1,"MAXETA","BVD"],["74818509754766","M00897","BVD OLYMPIA NIGHT MELANGE MAXETA","M",11,0,"MAXETA","BVD"],["74818509748283","M00896","BVD OLYMPIA NIGHT MELANGE MAXETA","S",24,0,"MAXETA","BVD"],["74605308185727","M00350","BVD VINTAGE  BEIGE MAXETA","XL",6,0,"MAXETA","BVD"],["74605308129104","M00337","BVD VINTAGE  BLANCO MAXETA","L",11,0,"MAXETA","BVD"],["74605308121946","M00336","BVD VINTAGE  BLANCO MAXETA","M",9,0,"MAXETA","BVD"],["74605308134159","M00338","BVD VINTAGE  BLANCO MAXETA","XL",11,0,"MAXETA","BVD"],["74605308165502","M00345","BVD VINTAGE  GARGOLA MAXETA","L",6,0,"MAXETA","BVD"],["74605308170955","M00346","BVD VINTAGE  GARGOLA MAXETA","XL",4,0,"MAXETA","BVD"],["74605308144407","M00341","BVD VINTAGE  MELANGE MAXETA","L",2,0,"MAXETA","BVD"],["74605308140394","M00340","BVD VINTAGE  MELANGE MAXETA","M",7,0,"MAXETA","BVD"],["74605308148297","M00342","BVD VINTAGE  MELANGE MAXETA","XL",13,0,"MAXETA","BVD"],["78309281649681","FKJBHWEOFHW","CAFFARENA VITTORIO ACERO UOMO","L",42,0,"UOMO CATTIVO","CAFFARENA"],["78309281644123","FLKENFHKIWJEF","CAFFARENA VITTORIO ACERO UOMO","M",36,0,"UOMO CATTIVO","CAFFARENA"],["78309281639561","DJOIEHFEF","CAFFARENA VITTORIO ACERO UOMO","S",18,1,"UOMO CATTIVO","CAFFARENA"],["78309281653727","FHEIOFHFJEF","CAFFARENA VITTORIO ACERO UOMO","XL",20,1,"UOMO CATTIVO","CAFFARENA"],["78309281596511","FOWJFOWEOK","CAFFARENA VITTORIO NEGRO UOMO","L",106,2,"UOMO CATTIVO","CAFFARENA"],["78309281592466","OPWEIKRPW","CAFFARENA VITTORIO NEGRO UOMO","M",102,3,"UOMO CATTIVO","CAFFARENA"],["78309281588564","FIWRUWOR","CAFFARENA VITTORIO NEGRO UOMO","S",48,0,"UOMO CATTIVO","CAFFARENA"],["78309281602188","PWORIWOPRI","CAFFARENA VITTORIO NEGRO UOMO","XL",56,2,"UOMO CATTIVO","CAFFARENA"],["78309281607515","QWEPORI","CAFFARENA VITTORIO PERLA UOMO","L",41,0,"UOMO CATTIVO","CAFFARENA"],["78309281600188","FWJFWEPIF","CAFFARENA VITTORIO PERLA UOMO","M",42,0,"UOMO CATTIVO","CAFFARENA"],["78309281593025","FFHEWIOFWOPE","CAFFARENA VITTORIO PERLA UOMO","S",20,1,"UOMO CATTIVO","CAFFARENA"],["78309281614800","FOPWJWPO","CAFFARENA VITTORIO PERLA UOMO","XL",28,0,"UOMO CATTIVO","CAFFARENA"],["78309281640181","DOWFKJFKLFM","CAFFARENA VITTORIO PLOMO UOMO","L",48,1,"UOMO CATTIVO","CAFFARENA"],["78309281635211","EFOPWERO","CAFFARENA VITTORIO PLOMO UOMO","M",41,2,"UOMO CATTIVO","CAFFARENA"],["78309281631494","KJNMNBPOSERI","CAFFARENA VITTORIO PLOMO UOMO","S",21,0,"UOMO CATTIVO","CAFFARENA"],["78309281644908","ÑSDEOWJE","CAFFARENA VITTORIO PLOMO UOMO","XL",26,1,"UOMO CATTIVO","CAFFARENA"],["78309281603027","LSFIWEIPRF","CAFFARENA VITTORIO TOPO UOMO","L",44,0,"UOMO CATTIVO","CAFFARENA"],["78309281596862","FJKHFEOISFL","CAFFARENA VITTORIO TOPO UOMO","M",43,0,"UOMO CATTIVO","CAFFARENA"],["78309281589438","OIRUWRYO","CAFFARENA VITTORIO TOPO UOMO","S",16,0,"UOMO CATTIVO","CAFFARENA"],["78309281609578","JFHWPIFJW","CAFFARENA VITTORIO TOPO UOMO","XL",22,0,"UOMO CATTIVO","CAFFARENA"],["77619634913491","PACK7PRENDAS2","CAJA SORPRESA/1 PRENDA","M",20,4,"","PACK"],["77619633012224","CAJASORPRESA1","CAJA SORPRESA/1 PRENDA","S",14,2,"","PACK"],["77619637513811","77619637513811","CAJA SORPRESA/1 PRENDA","XL",10,4,"","PACK"],["78094719970104","E5F84WS58EF","CASACA BASICA ACERO EZZETA","L",12,0,"EZZETA","CASACA"],["78094719966002","E454FEWFF","CASACA BASICA ACERO EZZETA","M",8,1,"EZZETA","CASACA"],["78094719955236","Q45F8WED","CASACA BASICA ACERO EZZETA","S",1,0,"EZZETA","CASACA"],["78094719973638","4584EW","CASACA BASICA ACERO EZZETA","XL",9,0,"EZZETA","CASACA"],["78094719923722","DE454F5EW","CASACA BASICA BLANCA EZZETA","L",65,1,"EZZETA","CASACA"],["78094719918005","DE5EW965D","CASACA BASICA BLANCA EZZETA","M",60,3,"EZZETA","CASACA"],["78094719908248","IPQWSJHEUOD","CASACA BASICA BLANCA EZZETA","S",27,2,"EZZETA","CASACA"],["78094719929459","E4D58EW4F","CASACA BASICA BLANCA EZZETA","XL",38,0,"EZZETA","CASACA"],["78094719837236","ISOHJWOI","CASACA BASICA DENIM EZZETA","L",39,0,"EZZETA","CASACA"],["78094719833603","SIOUJ","CASACA BASICA DENIM EZZETA","M",38,0,"EZZETA","CASACA"],["78094719829667","WQHYUQ","CASACA BASICA DENIM EZZETA","S",16,0,"EZZETA","CASACA"],["78094719840959","DOIUDHQO","CASACA BASICA DENIM EZZETA","XL",23,0,"EZZETA","CASACA"],["78094719961731","D458WR4DF","CASACA BASICA MELANGE EZZETA","L",46,1,"EZZETA","CASACA"],["78094719954522","EFWFWF","CASACA BASICA MELANGE EZZETA","M",94,3,"EZZETA","CASACA"],["78094719943702","QAW41D584D","CASACA BASICA MELANGE EZZETA","S",13,2,"EZZETA","CASACA"],["78094719965884","FWE5WEF4WE5","CASACA BASICA MELANGE EZZETA","XL",33,0,"EZZETA","CASACA"],["78094719794862","DIHJEO","CASACA BASICA NEGRO EZZETA","L",163,1,"EZZETA","CASACA"],["78094719790774","JIDOHJAD","CASACA BASICA NEGRO EZZETA","M",337,4,"EZZETA","CASACA"],["78094719781562","UDHQOWWDJO","CASACA BASICA NEGRO EZZETA","S",56,2,"EZZETA","CASACA"],["78094719798238","DOLQWIDQ","CASACA BASICA NEGRO EZZETA","XL",78,0,"EZZETA","CASACA"],["78094719803711","ED84F5W8","CASACA BASICA VERDE EZZETA","L",42,0,"EZZETA","CASACA"],["78094719798128","FDE8WEF4","CASACA BASICA VERDE EZZETA","M",38,0,"EZZETA","CASACA"],["78094719786038","OIDEJED598","CASACA BASICA VERDE EZZETA","S",13,0,"EZZETA","CASACA"],["78094719808801","8EDW4E8W","CASACA BASICA VERDE EZZETA","XL",21,0,"EZZETA","CASACA"],["76257175360633","RTM069","CJSPS RMT BVD MAXETA","S",28,0,"MAXETA","BVD RMT"],["76257175123338","RTM024","CJSPS RMT JOGGER EZZETA","XL",8,0,"","JOGGER RMT"],["76894927865241","RMT0001","CJSPS RMT LICRA SMART MAXETA","S",13,0,"MAXETA","LICRA MENS"],["76257175243727","RTM043","CJSPS RMT POLERA EZZETA","L",3,0,"EZZETA","POLERA RMT"],["76257175237756","RTM042","CJSPS RMT POLERA EZZETA","M",2,0,"EZZETA","POLERA RMT"],["76257175228889","RTM041","CJSPS RMT POLERA EZZETA","S",199,0,"EZZETA","POLERA RMT"],["76257175028271","RTM001","CJSPS RMT POLO EZZETA","S",35,0,"EZZETA","POLO RMT"],["76257175049351","RTM004","CJSPS RMT POLO EZZETA","XL",58,0,"EZZETA","POLO RMT"],["76257175030501","RTM009","CJSPS RMT POLO MAXETA","S",87,0,"MAXETA","POLO RMT"],["76895133895714","RMTM0005","CJSPS RMT POLO MAXETA","XXL",21,0,"MAXETA","POLO RMT"],["76257175300153","RTM057","CJSPS RMT SHORT EZZETA","S",10,0,"EZZETA","SHORT RMT"],["76257175331506","RTM061","CJSPS RMT SHORT MAXETA","S",23,0,"MAXETA","SHORT RMT"],["76927680481232","CK25305","COLLAR RGL","",1,0,"EZZETA","COLLAR"],["74605310890694","M00855","CREATINE - 500 GM MAXETA","500 GRAMOS",78,0,"MAXETA","SUPLEMENTOS"],["77336346368630","MAXPRIME1294","ENTERIZO ZIPPER ACERO MAXETA","M",1,0,"MAXETA","ENTERIZO SHORT"],["77336346387139","MAXPRIME1297","ENTERIZO ZIPPER BLANCO MAXETA","S",1,0,"MAXETA","ENTERIZO SHORT"],["77336346390555","MAXPRIME1298","ENTERIZO ZIPPER CELESTE MAXETA","M",1,0,"MAXETA","ENTERIZO SHORT"],["77336346426035","MAXPRIME1302","ENTERIZO ZIPPER ROJO MAXETA","S",1,0,"MAXETA","ENTERIZO SHORT"],["77336346421359","MAXPRIME1303","ENTERIZO ZIPPER ROSADO MAXETA","M",1,0,"MAXETA","ENTERIZO SHORT"],["77336346426505","MAXPRIME1304","ENTERIZO ZIPPER ROSADO MAXETA","S",1,0,"MAXETA","ENTERIZO SHORT"],["78425226415439","CDE","ENTRADA CUMBRE DE ÉXITO","PABLO EZZETA",150,10,"PABLO EZZETA","EVENTO ENTRADAS"],["77336346309012","MAXPRIME1288","FLARE SUIT  MELANGE MAXETA","S",1,0,"MAXETA","ENTERIZO LARGO"],["77336346347317","MAXPRIME1290","FLARE SUIT NEGRO MAXETA","S",1,0,"MAXETA","ENTERIZO LARGO"],["77336346336996","MAXPRIME1291","FLARE SUIT PLOMO MAXETA","S",1,0,"MAXETA","ENTERIZO LARGO"],["77336346363787","MAXPRIME1293","FLARE SUIT VERDE MAXETA","S",1,0,"MAXETA","ENTERIZO LARGO"],["77336346476795","MAXPRIME1310","FLOW PANTS BEIGE MAXETA","S",1,0,"MAXETA","LEGGIN SIN BOLSILLO"],["77336346487094","MAXPRIME1312","FLOW PANTS FUCSIA MAXETA","L",1,0,"MAXETA","LEGGIN SIN BOLSILLO"],["77336346519659","MAXPRIME1316","FLOW PANTS PLOMO MAXETA","M",1,0,"MAXETA","LEGGIN SIN BOLSILLO"],["77336346539711","MAXPRIME1319","FLOW PANTS UVA MAXETA","S",1,0,"MAXETA","LEGGIN SIN BOLSILLO"],["77595144957980","C59589","GORRA NEGRO ENTERO EZZETA","",1,0,"EZZETA","GORRA"],["77595144958063","M53976","GORRA NEGRO MALLA EZZETA","",1,0,"EZZETA","GORRA"],["77774177615806","S4847874","JEAN AZUL CLASICO EZZETA","28",126,0,"EZZETA","JEAN CLASICO"],["77774177621053","S484854","JEAN AZUL CLASICO EZZETA","30",185,0,"EZZETA","JEAN CLASICO"],["77774177624581","S4847845","JEAN AZUL CLASICO EZZETA","32",183,1,"EZZETA","JEAN CLASICO"],["77774177628259","F84848548","JEAN AZUL CLASICO EZZETA","34",127,0,"EZZETA","JEAN CLASICO"],["77774177636009","D98748485","JEAN AZUL CLASICO EZZETA","38",23,0,"EZZETA","JEAN CLASICO"],["77774177661702","D484D545","JEAN AZUL MARINO CLASICO EZZETA","28",87,0,"EZZETA","JEAN CLASICO"],["77774177666416","8D47854D854","JEAN AZUL MARINO CLASICO EZZETA","30",73,0,"EZZETA","JEAN CLASICO"],["77774177670766","D48484","JEAN AZUL MARINO CLASICO EZZETA","32",73,2,"EZZETA","JEAN CLASICO"],["77774192179150","DF484D845","JEAN AZUL MARINO CLASICO EZZETA","34",82,3,"EZZETA","JEAN CLASICO"],["77774177675627","D4854D84","JEAN AZUL MARINO CLASICO EZZETA","36",15,0,"EZZETA","JEAN CLASICO"],["77774192216636","DG484D845","JEAN AZUL MARINO CLASICO EZZETA","38",22,0,"EZZETA","JEAN CLASICO"],["76445061761971","010013","JEAN BAGGY BLACK WASH EZZETA","30",13,1,"EZZETA","JEAN BAGGY"],["76445076229255","010016","JEAN BAGGY BLACK WASH EZZETA","36",33,0,"EZZETA","JEAN BAGGY"],["75763859554274","JBCCO00001","JEAN BAGGY CARGO CELESTE OXIDO EZZETA","26",11,0,"EZZETA","JEAN CARGO"],["75763859564544","JBCCO00002","JEAN BAGGY CARGO CELESTE OXIDO EZZETA","28",3,0,"EZZETA","JEAN CARGO"],["75763859553291","JBCC00001","JEAN BAGGY CARGO CENIZO EZZETA","26",6,0,"EZZETA","JEAN CARGO"],["75763859560028","JBCC00002","JEAN BAGGY CARGO CENIZO EZZETA","28",13,0,"EZZETA","JEAN CARGO"],["75648269385966","JBH0002","JEAN BAGGY CELESTE EZZETA","28",1,0,"EZZETA","JEAN BAGGY"],["75648269391793","JBH0003","JEAN BAGGY CELESTE EZZETA","30",2,1,"EZZETA","JEAN BAGGY"],["75648269402489","JBH0005","JEAN BAGGY CELESTE EZZETA","34",14,1,"EZZETA","JEAN BAGGY"],["75648269377645","JBC001","JEAN BAGGY CENIZO EZZETA","28",20,3,"EZZETA","JEAN BAGGY"],["75648269385271","JBC002","JEAN BAGGY CENIZO EZZETA","30",25,1,"EZZETA","JEAN BAGGY"],["75648269390568","JBC003","JEAN BAGGY CENIZO EZZETA","32",34,2,"EZZETA","JEAN BAGGY"],["75648269396020","JBC004","JEAN BAGGY CENIZO EZZETA","34",36,0,"EZZETA","JEAN BAGGY"],["75648269401673","JBC005","JEAN BAGGY CENIZO EZZETA","36",6,1,"EZZETA","JEAN BAGGY"],["76409362115983","10001","JEAN BAGGY DSTR RASGADO AZUL","28",13,1,"EZZETA","JEAN BAGGY"],["76409365178334","10002","JEAN BAGGY DSTR RASGADO AZUL","30",180,1,"EZZETA","JEAN BAGGY"],["76409366026566","10003","JEAN BAGGY DSTR RASGADO AZUL","32",17,1,"EZZETA","JEAN BAGGY"],["76409367178975","10004","JEAN BAGGY DSTR RASGADO AZUL","34",26,1,"EZZETA","JEAN BAGGY"],["76409368314195","10005","JEAN BAGGY DSTR RASGADO AZUL","36",6,1,"EZZETA","JEAN BAGGY"],["76442867110074","0102001","JEAN BAGGY DSTR RASGADO NEGRO","28",6,0,"EZZETA","JEAN BAGGY"],["76442875776431","0102002","JEAN BAGGY DSTR RASGADO NEGRO","30",55,2,"EZZETA","JEAN BAGGY"],["76442877221941","0102003","JEAN BAGGY DSTR RASGADO NEGRO","32",37,1,"EZZETA","JEAN BAGGY"],["76442878290114","0102004","JEAN BAGGY DSTR RASGADO NEGRO","34",57,1,"EZZETA","JEAN BAGGY"],["76442879236688","0102005","JEAN BAGGY DSTR RASGADO NEGRO","36",104,1,"EZZETA","JEAN BAGGY"],["75648269393420","JBC0003","JEAN BAGGY HIELO EZZETA","30",6,5,"EZZETA","JEAN BAGGY"],["75648269399403","JBC0004","JEAN BAGGY HIELO EZZETA","32",20,6,"EZZETA","JEAN BAGGY"],["75648269404885","JBC0005","JEAN BAGGY HIELO EZZETA","34",20,6,"EZZETA","JEAN BAGGY"],["76445081428007","0011000","JEAN BAGGY HUMO EZZETA","28",1,0,"EZZETA","JEAN BAGGY"],["76445082403749","0011001","JEAN BAGGY HUMO EZZETA","30",1,0,"EZZETA","JEAN BAGGY"],["76445084967101","0011004","JEAN BAGGY HUMO EZZETA","36",10,0,"EZZETA","JEAN BAGGY"],["77819495012167","Q478748","JEAN BAGGY MAIZ EZZETA","30",102,3,"EZZETA","JEAN BAGGY"],["77819495017915","QQ6954854","JEAN BAGGY MAIZ EZZETA","32",214,4,"EZZETA","JEAN BAGGY"],["77819495022340","Q4848696","JEAN BAGGY MAIZ EZZETA","34",57,2,"EZZETA","JEAN BAGGY"],["77819495026796","Q95959","JEAN BAGGY MAIZ EZZETA","36",114,1,"EZZETA","JEAN BAGGY"],["77819494954888","AA485478","JEAN BAGGY NEGRO ENTERO EZZETA","30",28,3,"EZZETA","JEAN BAGGY"],["77819494959489","D4854784","JEAN BAGGY NEGRO ENTERO EZZETA","32",61,4,"EZZETA","JEAN BAGGY"],["77819494964700","Q84558478","JEAN BAGGY NEGRO ENTERO EZZETA","34",6,3,"EZZETA","JEAN BAGGY"],["77819494970171","Q58485","JEAN BAGGY NEGRO ENTERO EZZETA","36",11,1,"EZZETA","JEAN BAGGY"],["75648269445864","JBN001","JEAN BAGGY NEGRO EZZETA","28",19,1,"EZZETA","JEAN BAGGY"],["75648269451545","JBN002","JEAN BAGGY NEGRO EZZETA","30",101,2,"EZZETA","JEAN BAGGY"],["75648269458451","JBN003","JEAN BAGGY NEGRO EZZETA","32",94,2,"EZZETA","JEAN BAGGY"],["75648269464040","JBN004","JEAN BAGGY NEGRO EZZETA","34",11,1,"EZZETA","JEAN BAGGY"],["75648269469793","JBN005","JEAN BAGGY NEGRO EZZETA","36",62,0,"EZZETA","JEAN BAGGY"],["77094930898037","77094930898037","JEAN BAGGY NEGRO EZZETA","38",2,0,"EZZETA","JEAN BAGGY"],["76442849046599","0101011","JEAN BAGGY TWOCOLOR EZZETA","28",6,0,"EZZETA","JEAN BAGGY"],["76442850413162","0101012","JEAN BAGGY TWOCOLOR EZZETA","30",43,0,"EZZETA","JEAN BAGGY"],["76442851495581","0101013","JEAN BAGGY TWOCOLOR EZZETA","32",44,0,"EZZETA","JEAN BAGGY"],["76442852696846","0101014","JEAN BAGGY TWOCOLOR EZZETA","34",40,0,"EZZETA","JEAN BAGGY"],["76442853518128","0101015","JEAN BAGGY TWOCOLOR EZZETA","36",15,1,"EZZETA","JEAN BAGGY"],["77094932268871","77094932268871","JEAN BAGGY TWOCOLOR EZZETA","38",1,0,"EZZETA","JEAN BAGGY"],["76409372852253","001001","JEAN BAGGY VINTAGE AZUL","28",1,0,"EZZETA","JEAN BAGGY"],["76409410864525","001004","JEAN BAGGY VINTAGE AZUL","34",8,2,"EZZETA","JEAN BAGGY"],["76385461544847","011003","JEAN BAGGY VINTAGE NEGRO","32",20,1,"EZZETA","JEAN BAGGY"],["76385463493921","011004","JEAN BAGGY VINTAGE NEGRO","34",37,0,"EZZETA","JEAN BAGGY"],["76385464600507","011005","JEAN BAGGY VINTAGE NEGRO","36",2,0,"EZZETA","JEAN BAGGY"],["77436862631269","64654452","JEAN BALLOM PANTS AZUL VINTAGE CREPANTE","28",18,2,"CREPANTE","JEAN BALLOM PANTS"],["77436862638367","561451","JEAN BALLOM PANTS AZUL VINTAGE CREPANTE","30",3,2,"CREPANTE","JEAN BALLOM PANTS"],["77436862596901","48745","JEAN BALLOM PANTS HIELO CREPANTE","28",10,0,"CREPANTE","JEAN BALLOM PANTS"],["77436862600489","4187465","JEAN BALLOM PANTS HIELO CREPANTE","30",18,1,"CREPANTE","JEAN BALLOM PANTS"],["77436862551659","484512","JEAN BALLOM PANTS NEGRO CREPANTE","28",45,0,"CREPANTE","JEAN BALLOM PANTS"],["77436862559428","545845","JEAN BALLOM PANTS NEGRO CREPANTE","30",64,3,"CREPANTE","JEAN BALLOM PANTS"],["77436862568511","4158485626","JEAN BALLOM PANTS NEGRO CREPANTE","32",51,0,"CREPANTE","JEAN BALLOM PANTS"],["77436862599554","4185415","JEAN BALLOM PANTS PLOMO CLARO CREPANTE","28",69,0,"CREPANTE","JEAN BALLOM PANTS"],["77436862607451","198556","JEAN BALLOM PANTS PLOMO CLARO CREPANTE","30",68,1,"CREPANTE","JEAN BALLOM PANTS"],["77436862613132","484526","JEAN BALLOM PANTS PLOMO CLARO CREPANTE","32",48,0,"CREPANTE","JEAN BALLOM PANTS"],["77774177621221","S544585","JEAN CELESTE CLASICO EZZETA","28",86,0,"EZZETA","JEAN CLASICO"],["77774177627232","S4641528","JEAN CELESTE CLASICO EZZETA","30",163,0,"EZZETA","JEAN CLASICO"],["77774177632233","S4565456854","JEAN CELESTE CLASICO EZZETA","32",158,0,"EZZETA","JEAN CLASICO"],["77774177637849","S4985484","JEAN CELESTE CLASICO EZZETA","34",83,0,"EZZETA","JEAN CLASICO"],["77774177642851","S485455654","JEAN CELESTE CLASICO EZZETA","36",15,0,"EZZETA","JEAN CLASICO"],["77774177648227","S4848485","JEAN CELESTE CLASICO EZZETA","38",22,0,"EZZETA","JEAN CLASICO"],["77774177683399","4874846","JEAN CENIZO CLASICO EZZETA","28",94,0,"EZZETA","JEAN CLASICO"],["77774177687022","9878756949","JEAN CENIZO CLASICO EZZETA","30",111,0,"EZZETA","JEAN CLASICO"],["77774177690496","48484546","JEAN CENIZO CLASICO EZZETA","32",95,0,"EZZETA","JEAN CLASICO"],["77774177693953","48784854","JEAN CENIZO CLASICO EZZETA","34",82,0,"EZZETA","JEAN CLASICO"],["77774177698514","D478D74874","JEAN CENIZO CLASICO EZZETA","36",38,0,"EZZETA","JEAN CLASICO"],["77774177703020","R7487F87485","JEAN CENIZO CLASICO EZZETA","38",15,0,"EZZETA","JEAN CLASICO"],["77626546304178","S3245656","JEAN FLARED CENIZO CREPANTE","28",21,1,"CREPANTE","JEAN FLARED"],["77626546317019","D554555","JEAN FLARED CENIZO CREPANTE","30",54,0,"CREPANTE","JEAN FLARED"],["77626546322879","D52274896","JEAN FLARED CENIZO CREPANTE","32",41,1,"CREPANTE","JEAN FLARED"],["77626546328580","D63624146","JEAN FLARED CENIZO CREPANTE","34",44,0,"CREPANTE","JEAN FLARED"],["77626546335191","D287964","JEAN FLARED CENIZO CREPANTE","36",9,1,"CREPANTE","JEAN FLARED"],["77626546388069","D32548398","JEAN FLARED HUMO CREPANTE","30",6,2,"CREPANTE","JEAN FLARED"],["77626546393146","D326872652","JEAN FLARED HUMO CREPANTE","32",15,2,"CREPANTE","JEAN FLARED"],["77626546398695","D2596965","JEAN FLARED HUMO CREPANTE","34",19,0,"CREPANTE","JEAN FLARED"],["77626546301935","D36945582","JEAN FLARED ICE CREPANTE","28",45,0,"CREPANTE","JEAN FLARED"],["77626546312697","D3265799","JEAN FLARED ICE CREPANTE","30",90,0,"CREPANTE","JEAN FLARED"],["77626546319704","D3215698","JEAN FLARED ICE CREPANTE","32",91,1,"CREPANTE","JEAN FLARED"],["77626546325201","D2365482","JEAN FLARED ICE CREPANTE","34",73,0,"CREPANTE","JEAN FLARED"],["77626546331198","D3265863","JEAN FLARED ICE CREPANTE","36",15,1,"CREPANTE","JEAN FLARED"],["77626546311668","D9854853","JEAN FLARED NEGRO CREPANTE","30",60,1,"CREPANTE","JEAN FLARED"],["77626546317781","D63696255","JEAN FLARED NEGRO CREPANTE","32",56,0,"CREPANTE","JEAN FLARED"],["77626546323219","D255456","JEAN FLARED NEGRO CREPANTE","34",47,0,"CREPANTE","JEAN FLARED"],["77626546328906","D3646958","JEAN FLARED NEGRO CREPANTE","36",2,0,"CREPANTE","JEAN FLARED"],["77436862503151","54584","JEAN FLECOS CREPANTE CENIZO FOCALIZADO","28",2,1,"CREPANTE","JEAN FLECOS"],["77436862532640","415485","JEAN FLECOS CREPANTE HIELO","28",15,1,"CREPANTE","JEAN FLECOS"],["77436862538694","4854544","JEAN FLECOS CREPANTE HIELO","30",12,1,"CREPANTE","JEAN FLECOS"],["77436862550138","59845","JEAN FLECOS CREPANTE MAIZ","28",24,0,"CREPANTE","JEAN FLECOS"],["77436862553944","5456485","JEAN FLECOS CREPANTE MAIZ","30",27,1,"CREPANTE","JEAN FLECOS"],["77436862558141","8548541","JEAN FLECOS CREPANTE MAIZ","32",7,0,"CREPANTE","JEAN FLECOS"],["77436862509884","142639","JEAN FLECOS CREPANTE NEGRO","30",3,2,"CREPANTE","JEAN FLECOS"],["77774177615389","S854545","JEAN HIELO CLASICO EZZETA","28",109,0,"EZZETA","JEAN CLASICO"],["77774177620963","S48451465","JEAN HIELO CLASICO EZZETA","30",185,0,"EZZETA","JEAN CLASICO"],["77774177626013","S45458456","JEAN HIELO CLASICO EZZETA","32",163,3,"EZZETA","JEAN CLASICO"],["77774177631214","S4854854","JEAN HIELO CLASICO EZZETA","34",93,2,"EZZETA","JEAN CLASICO"],["77774177636964","S48548545","JEAN HIELO CLASICO EZZETA","36",18,0,"EZZETA","JEAN CLASICO"],["77774177642214","S484654","JEAN HIELO CLASICO EZZETA","38",30,0,"EZZETA","JEAN CLASICO"],["77774177674948","D4855D485","JEAN NEGRO CLASICO EZZETA","28",77,0,"EZZETA","JEAN CLASICO"],["77774192139497","DH484D845","JEAN NEGRO CLASICO EZZETA","30",117,0,"EZZETA","JEAN CLASICO"],["77774177679892","H484854","JEAN NEGRO CLASICO EZZETA","32",116,4,"EZZETA","JEAN CLASICO"],["77774177685258","48484854","JEAN NEGRO CLASICO EZZETA","34",80,2,"EZZETA","JEAN CLASICO"],["77774177690495","4H84854","JEAN NEGRO CLASICO EZZETA","36",36,0,"EZZETA","JEAN CLASICO"],["77774177695464","48454874","JEAN NEGRO CLASICO EZZETA","38",21,0,"EZZETA","JEAN CLASICO"],["75649216619777","C00247","JOGGER BAGGY PERLA CREPANTE","L",11,0,"CREPANTE","JOGGER"],["75649216631281","C00245","JOGGER BAGGY PERLA CREPANTE","S",5,0,"CREPANTE","JOGGER"],["75649216637194","C00248","JOGGER BAGGY PERLA CREPANTE","XL",2,0,"CREPANTE","JOGGER"],["77205235628407","110020","JOGGER BAGGY PRIME BEIGE EZZETA","28",87,0,"EZZETA","JOGGER BAGGY"],["77205235633232","110021","JOGGER BAGGY PRIME BEIGE EZZETA","30",176,0,"EZZETA","JOGGER BAGGY"],["77205235638284","110022","JOGGER BAGGY PRIME BEIGE EZZETA","32",144,0,"EZZETA","JOGGER BAGGY"],["77205235643317","110023","JOGGER BAGGY PRIME BEIGE EZZETA","34",85,0,"EZZETA","JOGGER BAGGY"],["77205235648522","110024","JOGGER BAGGY PRIME BEIGE EZZETA","36",42,0,"EZZETA","JOGGER BAGGY"],["77205235626147","110025","JOGGER BAGGY PRIME CEMENTO EZZETA","28",59,0,"EZZETA","JOGGER BAGGY"],["77205235630776","110026","JOGGER BAGGY PRIME CEMENTO EZZETA","30",137,0,"EZZETA","JOGGER BAGGY"],["77205235635285","110027","JOGGER BAGGY PRIME CEMENTO EZZETA","32",170,1,"EZZETA","JOGGER BAGGY"],["77205235640092","110028","JOGGER BAGGY PRIME CEMENTO EZZETA","34",146,0,"EZZETA","JOGGER BAGGY"],["77205235644563","110029","JOGGER BAGGY PRIME CEMENTO EZZETA","36",82,0,"EZZETA","JOGGER BAGGY"],["77205235619306","110015","JOGGER BAGGY PRIME GARGOLA EZZETA","28",74,0,"EZZETA","JOGGER BAGGY"],["77205235624036","110016","JOGGER BAGGY PRIME GARGOLA EZZETA","30",121,0,"EZZETA","JOGGER BAGGY"],["77205235629034","110017","JOGGER BAGGY PRIME GARGOLA EZZETA","32",161,0,"EZZETA","JOGGER BAGGY"],["77205235633517","110018","JOGGER BAGGY PRIME GARGOLA EZZETA","34",92,0,"EZZETA","JOGGER BAGGY"],["77205235638230","110019","JOGGER BAGGY PRIME GARGOLA EZZETA","36",52,0,"EZZETA","JOGGER BAGGY"],["77205235575165","1100010","JOGGER BAGGY PRIME NEGRO EZZETA","28",120,0,"EZZETA","JOGGER BAGGY"],["77205235580309","1100011","JOGGER BAGGY PRIME NEGRO EZZETA","30",249,1,"EZZETA","JOGGER BAGGY"],["77205235585541","110012","JOGGER BAGGY PRIME NEGRO EZZETA","32",182,1,"EZZETA","JOGGER BAGGY"],["77205235590838","110013","JOGGER BAGGY PRIME NEGRO EZZETA","34",112,0,"EZZETA","JOGGER BAGGY"],["77205235595922","110014","JOGGER BAGGY PRIME NEGRO EZZETA","36",54,0,"EZZETA","JOGGER BAGGY"],["77526066364771","B4896","JOGGER CARGO FOREST BLACK","L",56,5,"MAXETA","JOGGER"],["77526066361449","B6695","JOGGER CARGO FOREST BLACK","M",82,0,"MAXETA","JOGGER"],["77526066356889","B7894","JOGGER CARGO FOREST BLACK","S",121,3,"MAXETA","JOGGER"],["77526066368072","B3697","JOGGER CARGO FOREST BLACK","XL",52,2,"MAXETA","JOGGER"],["76037938878317","JCF00003","JOGGER CARGO FOREST VERDE MAXETA","L",63,2,"MAXETA","JOGGER"],["76037938159484","JCF00002","JOGGER CARGO FOREST VERDE MAXETA","M",270,2,"MAXETA","JOGGER"],["76037934526763","JCF00001","JOGGER CARGO FOREST VERDE MAXETA","S",182,4,"MAXETA","JOGGER"],["76037939739652","JCF00004","JOGGER CARGO FOREST VERDE MAXETA","XL",59,3,"MAXETA","JOGGER"],["77889396107527","IKDWHNF","JOGGER CLASSIC AMARILLO MAXETA","L",15,0,"MAXETA","JOGGER CLASSIC"],["77889396092863","UJDHUED","JOGGER CLASSIC AMARILLO MAXETA","S",12,1,"MAXETA","JOGGER CLASSIC"],["77661763549508","J98845","JOGGER CLASSIC BEIGE MAXETA","L",61,1,"MAXETA","JOGGER CLASSIC"],["77661763545714","J98455","JOGGER CLASSIC BEIGE MAXETA","M",38,1,"MAXETA","JOGGER CLASSIC"],["77661763539833","J52254","JOGGER CLASSIC BEIGE MAXETA","S",11,2,"MAXETA","JOGGER CLASSIC"],["77661763553468","J125496","JOGGER CLASSIC BEIGE MAXETA","XL",80,0,"MAXETA","JOGGER CLASSIC"],["77661763600196","J6697445","JOGGER CLASSIC GARGOLA MAXETA","L",7,1,"MAXETA","JOGGER CLASSIC"],["77661763591063","J259842","JOGGER CLASSIC GARGOLA MAXETA","S",7,4,"MAXETA","JOGGER CLASSIC"],["77661763604916","J2365955","JOGGER CLASSIC GARGOLA MAXETA","XL",12,0,"MAXETA","JOGGER CLASSIC"],["77661763586131","J254793","JOGGER CLASSIC MELANGE MAXETA","L",28,1,"MAXETA","JOGGER CLASSIC"],["77661763582827","J169637","JOGGER CLASSIC MELANGE MAXETA","M",6,4,"MAXETA","JOGGER CLASSIC"],["77661763589797","J153264","JOGGER CLASSIC MELANGE MAXETA","XL",19,1,"MAXETA","JOGGER CLASSIC"],["77661763549665","J1493556","JOGGER CLASSIC NEGRO MAXETA","L",3,1,"MAXETA","JOGGER CLASSIC"],["77661763539089","J5236874","JOGGER CLASSIC NEGRO MAXETA","S",1,0,"MAXETA","JOGGER CLASSIC"],["77661763593850","J452665","JOGGER CLASSIC PERLA MAXETA","L",10,0,"MAXETA","JOGGER CLASSIC"],["77661763588755","J2363655","JOGGER CLASSIC PERLA MAXETA","M",8,0,"MAXETA","JOGGER CLASSIC"],["77661763582511","J2599743","JOGGER CLASSIC PERLA MAXETA","S",9,3,"MAXETA","JOGGER CLASSIC"],["77661763598693","J2547965","JOGGER CLASSIC PERLA MAXETA","XL",9,1,"MAXETA","JOGGER CLASSIC"],["77661763560886","J5593525","JOGGER CLASSIC VERDE MAXETA","L",25,0,"MAXETA","JOGGER CLASSIC"],["77661763556050","J9562565","JOGGER CLASSIC VERDE MAXETA","M",27,1,"MAXETA","JOGGER CLASSIC"],["77661763547214","J632548","JOGGER CLASSIC VERDE MAXETA","S",12,4,"MAXETA","JOGGER CLASSIC"],["77661763565497","J159876","JOGGER CLASSIC VERDE MAXETA","XL",24,0,"MAXETA","JOGGER CLASSIC"],["77516889042540","1166550","JOGGER CRYSTAL NEGRO CREPANTE","L",54,0,"CREPANTE","JOGGER"],["77516889037587","2211660","JOGGER CRYSTAL NEGRO CREPANTE","M",42,0,"CREPANTE","JOGGER"],["77516889031012","3322110","JOGGER CRYSTAL NEGRO CREPANTE","S",42,0,"CREPANTE","JOGGER"],["77516889047740","5511330","JOGGER CRYSTAL NEGRO CREPANTE","XL",60,0,"CREPANTE","JOGGER"],["74605317519299","C00217","JOGGER OV CEMENTO CREPANTE","S",2,0,"CREPANTE","JOGGER OV"],["75648972553299","E00295","JOGGER OVERSIZE VINO EZZETA","L",18,0,"EZZETA","JOGGER OV"],["75648972564245","E00293","JOGGER OVERSIZE VINO EZZETA","S",15,0,"EZZETA","JOGGER OV"],["75648972568209","E00296","JOGGER OVERSIZE VINO EZZETA","XL",3,0,"EZZETA","JOGGER OV"],["75918557775753","SDC0004","JOGGER SET DRIP MELANGE CREPANTE","L",1,0,"CREPANTE","JOGGER"],["75918549404872","SDC0001","JOGGER SET DRIP NEGRO CREPANTE","M",1,0,"CREPANTE","JOGGER"],["76556679631633","ST0102019","JOGGER SET SIGNORILE BEIGE","XL",2,0,"UOMO CATTIVO","JOGGER"],["76556679617236","ST0102012","JOGGER SET SIGNORILE NEGRO","S",60,0,"UOMO CATTIVO","JOGGER"],["76556679634341","ST0102015","JOGGER SET SIGNORILE NEGRO","XL",21,0,"UOMO CATTIVO","JOGGER"],["76556679689825","ST0102026","JOGGER SET SIGNORILE PERLA","L",17,0,"UOMO CATTIVO","JOGGER"],["76556679684534","ST0102025","JOGGER SET SIGNORILE PERLA","M",10,1,"UOMO CATTIVO","JOGGER"],["76556679677470","ST0102024","JOGGER SET SIGNORILE PERLA","S",23,0,"UOMO CATTIVO","JOGGER"],["76556679695516","ST0102027","JOGGER SET SIGNORILE PERLA","XL",18,0,"UOMO CATTIVO","JOGGER"],["76556679629663","ST0102022","JOGGER SET SIGNORILE PLOMO","L",2,0,"UOMO CATTIVO","JOGGER"],["76556679633779","ST0102023","JOGGER SET SIGNORILE PLOMO","XL",13,0,"UOMO CATTIVO","JOGGER"],["77783918391642","BM128565","JOGGER WASH BEIGE MAXETA","L",26,0,"MAXETA","JOGGER"],["77783918388169","B12549863","JOGGER WASH BEIGE MAXETA","M",25,0,"MAXETA","JOGGER"],["77783918383730","C25143698","JOGGER WASH BEIGE MAXETA","S",2,0,"MAXETA","JOGGER"],["77783918396009","Q5498656","JOGGER WASH BEIGE MAXETA","XL",6,0,"MAXETA","JOGGER"],["77783918339189","D5855548","JOGGER WASH PLOMO MAXETA","L",1,0,"MAXETA","JOGGER"],["77783918337735","F55845845","JOGGER WASH VERDE MAXETA","L",4,0,"MAXETA","JOGGER"],["77336346441150","MAXPRIME1305","LEGGIN POCKET NEGRO MAXETA","L",1,0,"MAXETA","LEGGIN CON BOLSILLO"],["77336346445944","MAXPRIME1306","LEGGIN POCKET NEGRO MAXETA","M",5,0,"MAXETA","LEGGIN CON BOLSILLO"],["77336346450838","MAXPRIME1307","LEGGIN POCKET NEGRO MAXETA","S",5,0,"MAXETA","LEGGIN CON BOLSILLO"],["74605309200120","M00560","LICRA SMART  BLANCO MAXETA","S",20,0,"MAXETA","LICRA MENS"],["74605309154931","M00551","LICRA SMART  NEGRO MAXETA","S",21,0,"MAXETA","LICRA MENS"],["74605309160183","M00556","LICRA SMART  ROJO MAXETA","L",1,0,"MAXETA","LICRA MENS"],["77707955410694","L1254693","MOM JEAN BROWN CREPANTE","28",76,0,"CREPANTE","MOM JEAN"],["77707955417243","L254839","MOM JEAN BROWN CREPANTE","30",61,3,"CREPANTE","MOM JEAN"],["77707955421402","L1257463","MOM JEAN BROWN CREPANTE","32",90,4,"CREPANTE","MOM JEAN"],["77707955426897","L1698965","MOM JEAN BROWN CREPANTE","34",82,2,"CREPANTE","MOM JEAN"],["77707955432475","L5248963","MOM JEAN BROWN CREPANTE","36",54,4,"CREPANTE","MOM JEAN"],["77574022583803","200043001","MOM JEAN CELESTE 2.0 EZZETA","28",3,2,"EZZETA","MOM JEAN"],["77574022589994","200039671","MOM JEAN CELESTE 2.0 EZZETA","30",32,3,"EZZETA","MOM JEAN"],["77574022595042","300014081","MOM JEAN CELESTE 2.0 EZZETA","32",67,5,"EZZETA","MOM JEAN"],["77574022599528","300014072","MOM JEAN CELESTE 2.0 EZZETA","34",93,3,"EZZETA","MOM JEAN"],["77574022604042","300014091","MOM JEAN CELESTE 2.0 EZZETA","36",84,2,"EZZETA","MOM JEAN"],["77574022527696","800015792","MOM JEAN CENIZO 2.0 EZZETA","28",39,5,"EZZETA","MOM JEAN"],["77574022536126","200012571","MOM JEAN CENIZO 2.0 EZZETA","30",96,7,"EZZETA","MOM JEAN"],["77574022542394","800021841","MOM JEAN CENIZO 2.0 EZZETA","32",160,7,"EZZETA","MOM JEAN"],["77574022546951","1200035321","MOM JEAN CENIZO 2.0 EZZETA","34",76,2,"EZZETA","MOM JEAN"],["77574022550963","200006421","MOM JEAN CENIZO 2.0 EZZETA","36",42,3,"EZZETA","MOM JEAN"],["77707955411879","L4256952","MOM JEAN COW CREPANTE","28",54,0,"CREPANTE","MOM JEAN"],["77707955416498","K236585","MOM JEAN COW CREPANTE","30",133,0,"CREPANTE","MOM JEAN"],["77707955421402_1","K3666985","MOM JEAN COW CREPANTE","32",109,1,"CREPANTE","MOM JEAN"],["77707955425111","K145289","MOM JEAN COW CREPANTE","34",59,0,"CREPANTE","MOM JEAN"],["77707955429016","K6355792","MOM JEAN COW CREPANTE","36",23,0,"CREPANTE","MOM JEAN"],["76892410085622","CB025458","MOM JEAN CRYSTAL BLACK CREPANTE","28",89,2,"CREPANTE","MOM JEAN"],["76892410093726","CB025459","MOM JEAN CRYSTAL BLACK CREPANTE","30",154,0,"CREPANTE","MOM JEAN"],["76892410098362","CB025460","MOM JEAN CRYSTAL BLACK CREPANTE","32",275,3,"CREPANTE","MOM JEAN"],["76892410105537","CB025461","MOM JEAN CRYSTAL BLACK CREPANTE","34",71,0,"CREPANTE","MOM JEAN"],["76892410110736","CB025462","MOM JEAN CRYSTAL BLACK CREPANTE","36",103,1,"CREPANTE","MOM JEAN"],["76852246451769","JC025431","MOM JEAN CRYSTAL BLUE CREPANTE","28",102,2,"CREPANTE","MOM JEAN"],["76852246456283","JC025432","MOM JEAN CRYSTAL BLUE CREPANTE","30",177,1,"CREPANTE","MOM JEAN"],["76852246460313","JC025433","MOM JEAN CRYSTAL BLUE CREPANTE","32",254,4,"CREPANTE","MOM JEAN"],["76852246464065","JC025434","MOM JEAN CRYSTAL BLUE CREPANTE","34",147,1,"CREPANTE","MOM JEAN"],["76852246467670","JC025435","MOM JEAN CRYSTAL BLUE CREPANTE","36",107,2,"CREPANTE","MOM JEAN"],["76616663692642","MJ010201","MOM JEAN FOCAL BLACK EZZETA","28",139,4,"EZZETA","MOM JEAN"],["76616663697617","MJ010202","MOM JEAN FOCAL BLACK EZZETA","30",411,6,"EZZETA","MOM JEAN"],["76616663702805","MJ010203","MOM JEAN FOCAL BLACK EZZETA","32",419,7,"EZZETA","MOM JEAN"],["76616663708123","MJ010204","MOM JEAN FOCAL BLACK EZZETA","34",251,4,"EZZETA","MOM JEAN"],["76616663713087","MJ010205","MOM JEAN FOCAL BLACK EZZETA","36",94,4,"EZZETA","MOM JEAN"],["76643333280097","JG0102001","MOM JEAN FOCAL BLUE EZZETA","28",134,3,"EZZETA","MOM JEAN"],["76643333285239","JG0102002","MOM JEAN FOCAL BLUE EZZETA","30",311,4,"EZZETA","MOM JEAN"],["76643333289112","JG0102003","MOM JEAN FOCAL BLUE EZZETA","32",490,3,"EZZETA","MOM JEAN"],["76643333292977","JG0102004","MOM JEAN FOCAL BLUE EZZETA","34",174,1,"EZZETA","MOM JEAN"],["76643333297686","JG0102005","MOM JEAN FOCAL BLUE EZZETA","36",53,3,"EZZETA","MOM JEAN"],["78335119645382","EFHELFKJ","MOM JEAN GREEN CREPANTE","28",103,1,"CREPANTE","MOM JEAN"],["78335119653539","DWPQOWIFHQW","MOM JEAN GREEN CREPANTE","30",147,0,"CREPANTE","MOM JEAN"],["78335119661061","DFEWOIFHEW","MOM JEAN GREEN CREPANTE","32",264,0,"CREPANTE","MOM JEAN"],["78335119667141","FEWIEHFE","MOM JEAN GREEN CREPANTE","34",165,1,"CREPANTE","MOM JEAN"],["78335119672183","FOIWEHFWE","MOM JEAN GREEN CREPANTE","36",108,0,"CREPANTE","MOM JEAN"],["76643333280111","JG0102006","MOM JEAN GREY EZZETA","28",3,2,"EZZETA","MOM JEAN"],["76643333285097","JG0102007","MOM JEAN GREY EZZETA","30",365,4,"EZZETA","MOM JEAN"],["76643333289039","JG0102008","MOM JEAN GREY EZZETA","32",147,7,"EZZETA","MOM JEAN"],["76643333293240","JG0102009","MOM JEAN GREY EZZETA","34",215,2,"EZZETA","MOM JEAN"],["76643333297711","JG0102010","MOM JEAN GREY EZZETA","36",175,1,"EZZETA","MOM JEAN"],["77574022548222","700039651","MOM JEAN HIELO 2.0 EZZETA","34",47,2,"EZZETA","MOM JEAN"],["77574022553381","200019451","MOM JEAN HIELO 2.0 EZZETA","36",44,1,"EZZETA","MOM JEAN"],["77575519109946","6369124556","MOM JEAN HIELO ROCK CREPANTE","28",57,1,"CREPANTE","MOM JEAN"],["77574022584386","800020102","MOM JEAN HIELO ROCK CREPANTE","30",116,1,"CREPANTE","MOM JEAN"],["77574041488931","500008596","MOM JEAN HIELO ROCK CREPANTE","32",153,1,"CREPANTE","MOM JEAN"],["77574022592997","200037962","MOM JEAN HIELO ROCK CREPANTE","34",118,0,"CREPANTE","MOM JEAN"],["77574022597857","100035331","MOM JEAN HIELO ROCK CREPANTE","36",109,0,"CREPANTE","MOM JEAN"],["76679601073772","SK010206","MOM JEAN ICE CREPANTE","28",105,1,"CREPANTE","MOM JEAN"],["76679601082044","SK010207","MOM JEAN ICE CREPANTE","30",98,2,"CREPANTE","MOM JEAN"],["76679601087298","SK010208","MOM JEAN ICE CREPANTE","32",245,1,"CREPANTE","MOM JEAN"],["76679601092830","SK010209","MOM JEAN ICE CREPANTE","34",127,3,"CREPANTE","MOM JEAN"],["76679601098588","SK010210","MOM JEAN ICE CREPANTE","36",82,1,"CREPANTE","MOM JEAN"],["77707955409132","L395846","MOM JEAN LIL BLACK CREPANTE","28",71,1,"CREPANTE","MOM JEAN"],["77707955416054","L632594","MOM JEAN LIL BLACK CREPANTE","30",99,1,"CREPANTE","MOM JEAN"],["77707955422477","L325463","MOM JEAN LIL BLACK CREPANTE","32",113,2,"CREPANTE","MOM JEAN"],["77707955428948","L326845","MOM JEAN LIL BLACK CREPANTE","34",40,0,"CREPANTE","MOM JEAN"],["77707955435598","L253647","MOM JEAN LIL BLACK CREPANTE","36",2,1,"CREPANTE","MOM JEAN"],["77707955458627","K254796","MOM JEAN LIL BLUE CREPANTE","28",82,1,"CREPANTE","MOM JEAN"],["77707955464037","K2547965","MOM JEAN LIL BLUE CREPANTE","30",82,1,"CREPANTE","MOM JEAN"],["77707955467550","K2487596","MOM JEAN LIL BLUE CREPANTE","32",105,2,"CREPANTE","MOM JEAN"],["77707955471011","K2598436","MOM JEAN LIL BLUE CREPANTE","34",81,0,"CREPANTE","MOM JEAN"],["77707955474829","K2587143","MOM JEAN LIL BLUE CREPANTE","36",23,1,"CREPANTE","MOM JEAN"],["77205235572371","100286","MOM JEAN MAIZ CRYSTAL CREPANTE","28",93,2,"CREPANTE","MOM JEAN"],["77205235577594","100297","MOM JEAN MAIZ CRYSTAL CREPANTE","30",141,1,"CREPANTE","MOM JEAN"],["77205235582505","100308","MOM JEAN MAIZ CRYSTAL CREPANTE","32",195,1,"CREPANTE","MOM JEAN"],["77205235587347","100219","MOM JEAN MAIZ CRYSTAL CREPANTE","34",191,0,"CREPANTE","MOM JEAN"],["77205235592880","1002210","MOM JEAN MAIZ CRYSTAL CREPANTE","36",119,0,"CREPANTE","MOM JEAN"],["77205235569728","100231","MOM JEAN MAIZ DSTR CREPANTE","28",127,0,"CREPANTE","MOM JEAN"],["77205235574901","100242","MOM JEAN MAIZ DSTR CREPANTE","30",162,0,"CREPANTE","MOM JEAN"],["77205235579000","100253","MOM JEAN MAIZ DSTR CREPANTE","32",219,0,"CREPANTE","MOM JEAN"],["77205235582706","100264","MOM JEAN MAIZ DSTR CREPANTE","34",183,0,"CREPANTE","MOM JEAN"],["77205235587173","100275","MOM JEAN MAIZ DSTR CREPANTE","36",110,0,"CREPANTE","MOM JEAN"],["77574022549327","500017721","MOM JEAN NEGRO 2.0 EZZETA","34",9,3,"EZZETA","MOM JEAN"],["77574022554251","400019731","MOM JEAN NEGRO 2.0 EZZETA","36",32,0,"EZZETA","MOM JEAN"],["77819495037807","Q494998","MOM JEAN NEGRO EZZETA","28",93,1,"EZZETA","MOM JEAN"],["77819495044069","Q3264596","MOM JEAN NEGRO EZZETA","30",23,6,"EZZETA","MOM JEAN"],["77819495049719","Q62548478","MOM JEAN NEGRO EZZETA","32",146,7,"EZZETA","MOM JEAN"],["77819495056491","Q485614654","MOM JEAN NEGRO EZZETA","34",62,4,"EZZETA","MOM JEAN"],["77819495063486","Q4154854","MOM JEAN NEGRO EZZETA","36",51,5,"EZZETA","MOM JEAN"],["77575516698345","1597632548","MOM JEAN NEGRO ROCK CREPANTE","28",37,2,"CREPANTE","MOM JEAN"],["77574022579739","100028391","MOM JEAN NEGRO ROCK CREPANTE","30",77,1,"CREPANTE","MOM JEAN"],["77574022585249","1000021741","MOM JEAN NEGRO ROCK CREPANTE","32",127,1,"CREPANTE","MOM JEAN"],["77574041490456","500008743","MOM JEAN NEGRO ROCK CREPANTE","34",74,1,"CREPANTE","MOM JEAN"],["77574022589554","400021601","MOM JEAN NEGRO ROCK CREPANTE","36",39,0,"CREPANTE","MOM JEAN"],["77541658398297","125423","MOM JEAN ROUGH GREY CREPANTE","28",62,1,"CREPANTE","MOM JEAN"],["77541658407732","365289","MOM JEAN ROUGH GREY CREPANTE","30",58,2,"CREPANTE","MOM JEAN"],["77541658411840","147856","MOM JEAN ROUGH GREY CREPANTE","32",59,2,"CREPANTE","MOM JEAN"],["77541658415859","123985","MOM JEAN ROUGH GREY CREPANTE","34",43,0,"CREPANTE","MOM JEAN"],["77541658419721","146389","MOM JEAN ROUGH GREY CREPANTE","36",38,1,"CREPANTE","MOM JEAN"],["77541658400834","258746","MOM JEAN SHADOW FIT CREPANTE","28",75,1,"CREPANTE","MOM JEAN"],["77541658408976","246358","MOM JEAN SHADOW FIT CREPANTE","30",30,2,"CREPANTE","MOM JEAN"],["77541658413273","258964","MOM JEAN SHADOW FIT CREPANTE","32",101,3,"CREPANTE","MOM JEAN"],["77541658417300","234587","MOM JEAN SHADOW FIT CREPANTE","34",44,1,"CREPANTE","MOM JEAN"],["77541658421294","243698","MOM JEAN SHADOW FIT CREPANTE","36",55,0,"CREPANTE","MOM JEAN"],["76624985307524","SC010011","MOM JEAN SILVER CREPANTE","28",65,2,"CREPANTE","MOM JEAN"],["76624985312002","SC010012","MOM JEAN SILVER CREPANTE","30",139,3,"CREPANTE","MOM JEAN"],["76624985316044","SC010013","MOM JEAN SILVER CREPANTE","32",207,6,"CREPANTE","MOM JEAN"],["76624985319863","SC010014","MOM JEAN SILVER CREPANTE","34",141,3,"CREPANTE","MOM JEAN"],["76624985327089","SC010015","MOM JEAN SILVER CREPANTE","36",61,1,"CREPANTE","MOM JEAN"],["76679601071585","SK010201","MOM JEAN SKY BLUE EZZETA","28",109,5,"EZZETA","MOM JEAN"],["76679601076394","SK010202","MOM JEAN SKY BLUE EZZETA","30",217,5,"EZZETA","MOM JEAN"],["76679601080742","SK010203","MOM JEAN SKY BLUE EZZETA","32",290,8,"EZZETA","MOM JEAN"],["76679601085056","SK010204","MOM JEAN SKY BLUE EZZETA","34",155,5,"EZZETA","MOM JEAN"],["76679601089299","SK010205","MOM JEAN SKY BLUE EZZETA","36",55,3,"EZZETA","MOM JEAN"],["77541658400229","565369","MOM JEAN STREET ASH CREPANTE","28",40,1,"CREPANTE","MOM JEAN"],["77541658408332","366547","MOM JEAN STREET ASH CREPANTE","30",42,5,"CREPANTE","MOM JEAN"],["77541658414728","145398","MOM JEAN STREET ASH CREPANTE","32",37,2,"CREPANTE","MOM JEAN"],["77541658419744","365874","MOM JEAN STREET ASH CREPANTE","34",18,1,"CREPANTE","MOM JEAN"],["77541658425176","364825","MOM JEAN STREET ASH CREPANTE","36",26,0,"CREPANTE","MOM JEAN"],["77336346802564","MAXPRIME1352","NEGRO MAXETA","L",2,0,"MAXETA","TOP"],["77336346808042","MAXPRIME1353","NEGRO MAXETA","S",2,0,"MAXETA","TOP"],["76904346291729","OUJOGGER003","OUTLET JOGGER","L",10,0,"EZZETA","JOGGER OUTLET"],["76904345448490","OUJOGGER002","OUTLET JOGGER","M",16,0,"EZZETA","JOGGER OUTLET"],["76904344208171","OUJOGGER001","OUTLET JOGGER","S",4,0,"EZZETA","JOGGER OUTLET"],["76904347577778","OUJOGGER004","OUTLET JOGGER","XL",14,0,"EZZETA","JOGGER OUTLET"],["76904337488911","OUPOLERA003","OUTLET POLERA","L",5,0,"EZZETA","POLERA OUTLET"],["76904336288873","OUPOLERA002","OUTLET POLERA","M",4,0,"EZZETA","POLERA OUTLET"],["76904334828625","OUPOLERA001","OUTLET POLERA","S",3,0,"EZZETA","POLERA OUTLET"],["76903936936072","OUPOLO003","OUTLET POLO","L",94,0,"EZZETA","POLO OUTLET"],["76903935824332","OUPOLO002","OUTLET POLO","M",79,0,"EZZETA","POLO OUTLET"],["76903934620551","OUPOLO001","OUTLET POLO","S",58,0,"EZZETA","POLO OUTLET"],["76903938058313","OUPOLO004","OUTLET POLO","XL",53,0,"EZZETA","POLO OUTLET"],["76904327713260","OUSHORT0003","OUTLET SHORT","L",66,0,"EZZETA","SHORT OUTLET"],["76904326794372","OUSHORT0002","OUTLET SHORT","M",74,0,"EZZETA","SHORT OUTLET"],["76904325767936","OUSHORT0001","OUTLET SHORT","S",38,0,"EZZETA","SHORT OUTLET"],["76904328578615","OUSHORT0004","OUTLET SHORT","XL",20,0,"EZZETA","SHORT OUTLET"],["77340805148527","PACK50","PACK 50 PRENDAS","",18,2,"EZZETA","PACK"],["78042601091848","55956DHWUI","PANTALON CLASICO BEIGE CATTIVO","L",34,0,"UOMO CATTIVO","PANTALON"],["78042601087230","POURI638D","PANTALON CLASICO BEIGE CATTIVO","M",11,0,"UOMO CATTIVO","PANTALON"],["78042601082753","OSIOISXJOS","PANTALON CLASICO BEIGE CATTIVO","S",7,0,"UOMO CATTIVO","PANTALON"],["78042601100184","OIRGAOODIB","PANTALON CLASICO BEIGE CATTIVO","XL",12,1,"UOMO CATTIVO","PANTALON"],["78042601029277","ODEOUJIPW6","PANTALON CLASICO HUESO CATTIVO","L",106,0,"UOMO CATTIVO","PANTALON"],["78042601024260","JWUHDUD","PANTALON CLASICO HUESO CATTIVO","M",64,2,"UOMO CATTIVO","PANTALON"],["78042601020230","OPJUDUWHF","PANTALON CLASICO HUESO CATTIVO","S",45,0,"UOMO CATTIVO","PANTALON"],["78042601034327","KSJFEOD","PANTALON CLASICO HUESO CATTIVO","XL",35,0,"UOMO CATTIVO","PANTALON"],["78042601052020","PUGSOSOND","PANTALON CLASICO NEGRO CATTIVO","L",154,0,"UOMO CATTIVO","PANTALON"],["78042601045275","PORCUDSOSN","PANTALON CLASICO NEGRO CATTIVO","M",82,3,"UOMO CATTIVO","PANTALON"],["78042601030212","PODHHSOSQ","PANTALON CLASICO NEGRO CATTIVO","S",54,0,"UOMO CATTIVO","PANTALON"],["78042601060030","PEOFH855","PANTALON CLASICO NEGRO CATTIVO","XL",44,2,"UOMO CATTIVO","PANTALON"],["78042601087696","IUUDDPSOPS","PANTALON CLASICO PLOMO CLARO CATTIVO","L",37,0,"UOMO CATTIVO","PANTALON"],["78042601081528","NHDWOSWD","PANTALON CLASICO PLOMO CLARO CATTIVO","M",32,1,"UOMO CATTIVO","PANTALON"],["78042601075520","JOSDOPSDOP","PANTALON CLASICO PLOMO CLARO CATTIVO","S",16,0,"UOMO CATTIVO","PANTALON"],["78042601094390","QUEIDOSIS","PANTALON CLASICO PLOMO CLARO CATTIVO","XL",12,1,"UOMO CATTIVO","PANTALON"],["78042601130446","QOIDUDUHS","PANTALON CLASICO PLOMO RATA CATTIVO","L",35,0,"UOMO CATTIVO","PANTALON"],["78042601124522","SOIDJUHFHJH","PANTALON CLASICO PLOMO RATA CATTIVO","M",11,1,"UOMO CATTIVO","PANTALON"],["78042601118197","NSIIUDHAASK","PANTALON CLASICO PLOMO RATA CATTIVO","S",10,0,"UOMO CATTIVO","PANTALON"],["78042601136673","JSHOSHPQS","PANTALON CLASICO PLOMO RATA CATTIVO","XL",11,0,"UOMO CATTIVO","PANTALON"],["78042600979544","QUDFOOSN","PANTALON SASTRE AZUL UOMO","L",65,0,"UOMO CATTIVO","PANTALON"],["78042600972977","MOSHFY","PANTALON SASTRE AZUL UOMO","M",21,0,"UOMO CATTIVO","PANTALON"],["78042600959793","TSKODHSI","PANTALON SASTRE AZUL UOMO","S",22,0,"UOMO CATTIVO","PANTALON"],["78042600985860","ODHYHDO","PANTALON SASTRE AZUL UOMO","XL",20,0,"UOMO CATTIVO","PANTALON"],["77862605772946","W47848","PANTALON SASTRE BEIGE UOMO","L",61,0,"UOMO CATTIVO","PANTALON"],["77862605768313","WW2548749","PANTALON SASTRE BEIGE UOMO","M",21,0,"UOMO CATTIVO","PANTALON"],["77862605763125","W1456936","PANTALON SASTRE BEIGE UOMO","S",16,0,"UOMO CATTIVO","PANTALON"],["77862605777214","W95263246","PANTALON SASTRE BEIGE UOMO","XL",18,0,"UOMO CATTIVO","PANTALON"],["78042600968151","HYPPELS","PANTALON SASTRE HUESO UOMO","L",65,0,"UOMO CATTIVO","PANTALON"],["78042600963997","YMSOHDJ","PANTALON SASTRE HUESO UOMO","M",22,0,"UOMO CATTIVO","PANTALON"],["78042600954708","HSOEYDBK","PANTALON SASTRE HUESO UOMO","S",22,0,"UOMO CATTIVO","PANTALON"],["78042600976315","PYUFOLSH","PANTALON SASTRE HUESO UOMO","XL",21,0,"UOMO CATTIVO","PANTALON"],["77862605775747","W3215648","PANTALON SASTRE NEGRO UOMO","L",12,1,"UOMO CATTIVO","PANTALON"],["77862605763849","W512858","PANTALON SASTRE NEGRO UOMO","S",2,0,"UOMO CATTIVO","PANTALON"],["78042600975206","MHCIODKP","PANTALON SASTRE PLOMO CLARO UOMO","L",17,0,"UOMO CATTIVO","PANTALON"],["78042600967696","PPEIRUSOLS","PANTALON SASTRE PLOMO CLARO UOMO","M",11,0,"UOMO CATTIVO","PANTALON"],["78042600959902","WODJUFO","PANTALON SASTRE PLOMO CLARO UOMO","S",10,0,"UOMO CATTIVO","PANTALON"],["78042600980870","DUDJISISO3","PANTALON SASTRE PLOMO CLARO UOMO","XL",13,0,"UOMO CATTIVO","PANTALON"],["78042601031881","POFGEOAOS","PANTALON SASTRE PLOMO RATA UOMO","L",90,0,"UOMO CATTIVO","PANTALON"],["78042601024501","UFKGOASOO","PANTALON SASTRE PLOMO RATA UOMO","M",28,0,"UOMO CATTIVO","PANTALON"],["78042601016263","NAUDHFJ","PANTALON SASTRE PLOMO RATA UOMO","S",30,0,"UOMO CATTIVO","PANTALON"],["78042601039925","UDHYFUDH","PANTALON SASTRE PLOMO RATA UOMO","XL",31,0,"UOMO CATTIVO","PANTALON"],["77870222597151","F4158ED","POLERA BASICA ACERO EZZETA","L",13,0,"EZZETA","POLERA"],["77870222592113","E41F85ED","POLERA BASICA ACERO EZZETA","M",11,0,"EZZETA","POLERA"],["77870222603575","6F45E6D5F","POLERA BASICA ACERO EZZETA","XL",2,0,"EZZETA","POLERA"],["77570599773029","PBNE1236","POLERA BASICA BLANCO EZZETA","L",90,0,"EZZETA","POLERA"],["77570599779830","PBNE1237","POLERA BASICA BLANCO EZZETA","M",84,2,"EZZETA","POLERA"],["77870222623396","EF54F55EF4","POLERA BASICA BLANCO EZZETA","S",32,0,"EZZETA","POLERA"],["77870222640552","F45E4DF5","POLERA BASICA BLANCO EZZETA","XL",31,0,"EZZETA","POLERA"],["77870222595184","WD4E85F4","POLERA BASICA DENIM EZZETA","L",70,0,"EZZETA","POLERA"],["77870222590332","4F8R5E4F","POLERA BASICA DENIM EZZETA","M",66,0,"EZZETA","POLERA"],["77870222584309","F4R78E4T74","POLERA BASICA DENIM EZZETA","S",6,0,"EZZETA","POLERA"],["77870222601175","ES4F8E54","POLERA BASICA DENIM EZZETA","XL",9,0,"EZZETA","POLERA"],["77870255067287","F485D4FE00","POLERA BASICA GARGOLA EZZETA","L",58,0,"EZZETA","POLERA"],["77870222590952","SDW485S4D","POLERA BASICA GARGOLA EZZETA","M",63,0,"EZZETA","POLERA"],["77870222583591","4B85GF4BH8","POLERA BASICA GARGOLA EZZETA","S",27,0,"EZZETA","POLERA"],["77870222594824","S4D85E4F","POLERA BASICA GARGOLA EZZETA","XL",25,0,"EZZETA","POLERA"],["77870222555179","4DCF85EF4","POLERA BASICA MELANGE EZZETA","L",53,0,"EZZETA","POLERA"],["77870222549873","F95D9F5D","POLERA BASICA MELANGE EZZETA","M",58,1,"EZZETA","POLERA"],["77870222541069","8G48RFG4","POLERA BASICA MELANGE EZZETA","S",50,0,"EZZETA","POLERA"],["77870255053020","F48599D4FE","POLERA BASICA MELANGE EZZETA","XL",48,0,"EZZETA","POLERA"],["77570599773068","PBNE1234","POLERA BASICA NEGRO EZZETA","L",210,1,"EZZETA","POLERA"],["77570599780471","PBNE1235","POLERA BASICA NEGRO EZZETA","M",197,1,"EZZETA","POLERA"],["77870222541009","S8545484","POLERA BASICA NEGRO EZZETA","S",39,1,"EZZETA","POLERA"],["77870222559220","D4584EF85","POLERA BASICA NEGRO EZZETA","XL",46,0,"EZZETA","POLERA"],["77870222549712","4F8ED4","POLERA BASICA VERDE EZZETA","L",55,0,"EZZETA","POLERA"],["77870222546152","4F85ED4F85","POLERA BASICA VERDE EZZETA","M",59,0,"EZZETA","POLERA"],["77870222540530","4D85E4F85","POLERA BASICA VERDE EZZETA","S",32,0,"EZZETA","POLERA"],["77870222554917","F48G4","POLERA BASICA VERDE EZZETA","XL",29,0,"EZZETA","POLERA"],["77870222713600","TF485E74","POLERA CANGURO ACERO EZZETA","M",1,0,"EZZETA","POLERA"],["77870222708396","WRF485W4RF","POLERA CANGURO ACERO EZZETA","S",1,0,"EZZETA","POLERA"],["77870222725321","ERF4RE85","POLERA CANGURO BLANCO EZZETA","L",74,1,"EZZETA","POLERA"],["77870222721000","EF4E85D4F","POLERA CANGURO BLANCO EZZETA","M",82,3,"EZZETA","POLERA"],["77870222715260","SF415ED8F4","POLERA CANGURO BLANCO EZZETA","S",23,2,"EZZETA","POLERA"],["77870222729323","EF48E54","POLERA CANGURO BLANCO EZZETA","XL",29,0,"EZZETA","POLERA"],["77870222694188","4F5ED4","POLERA CANGURO DENIM EZZETA","L",60,0,"EZZETA","POLERA"],["77870222688785","EDF56EF5","POLERA CANGURO DENIM EZZETA","M",65,0,"EZZETA","POLERA"],["77870222681599","EDF654ED46F","POLERA CANGURO DENIM EZZETA","S",6,0,"EZZETA","POLERA"],["77870222699190","FRW4E584F","POLERA CANGURO DENIM EZZETA","XL",9,0,"EZZETA","POLERA"],["77870222679856","F965E96F5E","POLERA CANGURO GARGOLA EZZETA","L",46,1,"EZZETA","POLERA"],["77870255070337","AASTGT74","POLERA CANGURO GARGOLA EZZETA","M",41,4,"EZZETA","POLERA"],["77870222674987","EF4E854","POLERA CANGURO GARGOLA EZZETA","S",22,2,"EZZETA","POLERA"],["77870222684936","RF4E8E5F4","POLERA CANGURO GARGOLA EZZETA","XL",20,0,"EZZETA","POLERA"],["77870222678813","EF45GTR","POLERA CANGURO MELANGE EZZETA","L",50,0,"EZZETA","POLERA"],["77870222674432","ET4R8GT5","POLERA CANGURO MELANGE EZZETA","M",53,0,"EZZETA","POLERA"],["77870222669293","ETG85E47T","POLERA CANGURO MELANGE EZZETA","S",57,0,"EZZETA","POLERA"],["77870222682646","F4G85ER4G","POLERA CANGURO MELANGE EZZETA","XL",54,0,"EZZETA","POLERA"],["77870222641165","4EF58E4D7F","POLERA CANGURO NEGRO EZZETA","L",163,1,"EZZETA","POLERA"],["77870222635283","F485ED4F85","POLERA CANGURO NEGRO EZZETA","M",192,5,"EZZETA","POLERA"],["77870222628241","4FE54F85","POLERA CANGURO NEGRO EZZETA","S",33,2,"EZZETA","POLERA"],["77870222646936","4F85ED4GF","POLERA CANGURO NEGRO EZZETA","XL",19,0,"EZZETA","POLERA"],["77870222642949","H4Y8547H","POLERA CANGURO VERDE EZZETA","L",53,0,"EZZETA","POLERA"],["77870222637411","4GT58ER47GT8","POLERA CANGURO VERDE EZZETA","M",54,0,"EZZETA","POLERA"],["77870222631588","WD48WR4","POLERA CANGURO VERDE EZZETA","S",27,0,"EZZETA","POLERA"],["77870222648308","J485Y74","POLERA CANGURO VERDE EZZETA","XL",23,0,"EZZETA","POLERA"],["78006702230758","JSHDUWD","POLERA CLASSIC AMARILLO MAXETA","L",19,0,"MAXETA","POLERA"],["78006702226677","YURJSDG","POLERA CLASSIC AMARILLO MAXETA","M",16,0,"MAXETA","POLERA"],["78006702220803","UQWEIOD","POLERA CLASSIC AMARILLO MAXETA","S",47,0,"MAXETA","POLERA"],["77931805737015","UIYWKIED","POLERA CLASSIC BEIGE MAXETA","L",21,0,"MAXETA","POLERA"],["77931805731004","UEFOW","POLERA CLASSIC BEIGE MAXETA","M",43,0,"MAXETA","POLERA"],["77931805718919","OEROFHW","POLERA CLASSIC BEIGE MAXETA","S",21,0,"MAXETA","POLERA"],["77897291569133","IFDJHE","POLERA CLASSIC GARGOLA MAXETA","L",27,0,"MAXETA","POLERA"],["77897291563301","DOIQJE","POLERA CLASSIC GARGOLA MAXETA","M",57,0,"MAXETA","POLERA"],["77897291554907","DHIOD","POLERA CLASSIC GARGOLA MAXETA","S",20,1,"MAXETA","POLERA"],["77897291573998","HWPIOD","POLERA CLASSIC GARGOLA MAXETA","XL",17,0,"MAXETA","POLERA"],["77716331324290","C56548456","POLERA CLASSIC MELANGE MAXETA","L",22,1,"MAXETA","POLERA"],["77716331313650","C2684563","POLERA CLASSIC MELANGE MAXETA","S",29,0,"MAXETA","POLERA"],["77716331328270","C154845","POLERA CLASSIC MELANGE MAXETA","XL",29,0,"MAXETA","POLERA"],["77716331330585","C6562369","POLERA CLASSIC NEGRO MAXETA","L",58,0,"MAXETA","POLERA"],["77716331325494","C236849","POLERA CLASSIC NEGRO MAXETA","M",33,0,"MAXETA","POLERA"],["77716331317594","C479652","POLERA CLASSIC NEGRO MAXETA","S",91,2,"MAXETA","POLERA"],["77716331336019","C656974","POLERA CLASSIC NEGRO MAXETA","XL",66,1,"MAXETA","POLERA"],["77716331325641","C256594","POLERA CLASSIC PERLA MAXETA","L",10,0,"MAXETA","POLERA"],["77716331330735","C265648","POLERA CLASSIC PERLA MAXETA","XL",9,1,"MAXETA","POLERA"],["77923328839610","HUIWE","POLERA CLASSIC VERDE MAXETA","L",29,0,"MAXETA","POLERA"],["77923328835822","UEYIOJ","POLERA CLASSIC VERDE MAXETA","M",64,1,"MAXETA","POLERA"],["77923328829415","DHWEUHY","POLERA CLASSIC VERDE MAXETA","S",28,3,"MAXETA","POLERA"],["77870222796562","EDRG4TR85ED","POLERA CR BLANCO EZZETA","L",33,2,"EZZETA","POLERA"],["77870222791118","EDRG458R","POLERA CR BLANCO EZZETA","M",31,2,"EZZETA","POLERA"],["77870222782414","EDG4R8T5","POLERA CR BLANCO EZZETA","S",10,0,"EZZETA","POLERA"],["77870222801260","F854GTE","POLERA CR BLANCO EZZETA","XL",16,0,"EZZETA","POLERA"],["77870222737940","ETG4TR8GY5Y","POLERA CR DENIM EZZETA","L",63,0,"EZZETA","POLERA"],["77870222732823","HY485T","POLERA CR DENIM EZZETA","M",58,0,"EZZETA","POLERA"],["77870222728091","EDTFT4R845","POLERA CR DENIM EZZETA","S",18,0,"EZZETA","POLERA"],["77870222742904","RG4R85","POLERA CR DENIM EZZETA","XL",21,0,"EZZETA","POLERA"],["77870222761805","RGT4R","POLERA CR MELANGE EZZETA","L",90,2,"EZZETA","POLERA"],["77870222757418","ETG4R85G","POLERA CR MELANGE EZZETA","M",72,2,"EZZETA","POLERA"],["77870222753479","ETG4TR85G","POLERA CR MELANGE EZZETA","S",23,0,"EZZETA","POLERA"],["77870222765825","G4T5DEF41","POLERA CR MELANGE EZZETA","XL",43,0,"EZZETA","POLERA"],["77870222766393","DRGF4R8G4","POLERA CR NEGRO EZZETA","L",148,2,"EZZETA","POLERA"],["77870222760901","EDG4R58","POLERA CR NEGRO EZZETA","M",155,3,"EZZETA","POLERA"],["77870222755258","RG45R8F4","POLERA CR NEGRO EZZETA","S",52,0,"EZZETA","POLERA"],["77870222772150","RGT4RT58GT4","POLERA CR NEGRO EZZETA","XL",92,0,"EZZETA","POLERA"],["77870222801201","H4TRF","POLERA CR VERDE EZZETA","L",18,0,"EZZETA","POLERA"],["77983547551946","EST854TE4","POLERA CR VERDE EZZETA","M",18,0,"EZZETA","POLERA"],["77870222796822","TH4TY8","POLERA CR VERDE EZZETA","S",6,0,"EZZETA","POLERA"],["77870222805786","ESTG4TE4","POLERA CR VERDE EZZETA","XL",5,0,"EZZETA","POLERA"],["77574022633456","200041222","POLERA CRYSTAL WHITE CREPANTE","L",2,0,"CREPANTE","POLERA"],["77574022628421","800017812","POLERA CRYSTAL WHITE CREPANTE","M",40,0,"CREPANTE","POLERA"],["77574022638520","800020331","POLERA CRYSTAL WHITE CREPANTE","XL",12,0,"CREPANTE","POLERA"],["77644914544923","B45215","POLERA FOREST BLACK MAXETA","L",84,2,"MAXETA","POLERA"],["77644914541106","B15978","POLERA FOREST BLACK MAXETA","M",79,0,"MAXETA","POLERA"],["77644914536394","B36985","POLERA FOREST BLACK MAXETA","S",41,1,"MAXETA","POLERA"],["77644914548966","B3647125","POLERA FOREST BLACK MAXETA","XL",17,1,"MAXETA","POLERA"],["76920667782193","FM02256","POLERA FOREST VERDE MAXETA","L",66,1,"MAXETA","POLERA"],["76920667777305","FM02255","POLERA FOREST VERDE MAXETA","M",59,2,"MAXETA","POLERA"],["76920667771726","FM02254","POLERA FOREST VERDE MAXETA","S",23,1,"MAXETA","POLERA"],["76920667787063","FM02257","POLERA FOREST VERDE MAXETA","XL",27,0,"MAXETA","POLERA"],["75918570004213","SDC0009","POLERA SET DRIP MELANGE CREPANTE","L",2,0,"CREPANTE","POLERA"],["75918568473047","SDC0008","POLERA SET DRIP MELANGE CREPANTE","M",2,0,"CREPANTE","POLERA"],["75918563659393","SDC0006","POLERA SET DRIP NEGRO CREPANTE","L",5,0,"CREPANTE","POLERA"],["75918561764856","SDC0005","POLERA SET DRIP NEGRO CREPANTE","M",1,0,"CREPANTE","POLERA"],["77377875487969","129687","POLO 4T NEGRO","M",15,11,"BLEZZED","POLO OV"],["76178346862473","ACID002","POLO ACIDWASH GYMRAT MAXETA BEIGE","L",5,0,"MAXETA","POLO OV"],["76178344989065","ACID001","POLO ACIDWASH GYMRAT MAXETA BEIGE","M",3,0,"MAXETA","POLO OV"],["76178354358424","CENI002","POLO ACIDWASH GYMRAT MAXETA CENIZO","L",1,0,"MAXETA","POLO OV"],["77370223085541","23456","POLO BAZZIC APACHE","M",4,2,"BAZZIC","POLO OV"],["77370223096115","456789","POLO BAZZIC APACHE","XL",1,0,"BAZZIC","POLO OV"],["77370223134127","95175345","POLO BAZZIC BEIGE","L",6,2,"BAZZIC","POLO OV"],["77370223130231","56658125","POLO BAZZIC BEIGE","M",35,1,"BAZZIC","POLO OV"],["77370223124604","4569874523","POLO BAZZIC BEIGE","S",2,0,"BAZZIC","POLO OV"],["77370223138715","12365874","POLO BAZZIC BEIGE","XL",7,1,"BAZZIC","POLO OV"],["77370223077459","10203011","POLO BAZZIC BLANCO","L",132,2,"BAZZIC","POLO OV"],["77370223071747","1020303","POLO BAZZIC BLANCO","M",299,2,"BAZZIC","POLO OV"],["77370223077670","89101112","POLO BAZZIC GARGOLA","L",3,0,"BAZZIC","POLO OV"],["77370223072053","7891011","POLO BAZZIC GARGOLA","M",11,3,"BAZZIC","POLO OV"],["77370223063684","5678910","POLO BAZZIC GARGOLA","S",8,0,"BAZZIC","POLO OV"],["77370223137308","10202583","POLO BAZZIC NEGRO","L",73,2,"BAZZIC","POLO OV"],["77370223131585","101020203","POLO BAZZIC NEGRO","M",251,2,"BAZZIC","POLO OV"],["77377875641034","246987","POLO BAZZIC VINO","XL",2,1,"BAZZIC","POLO OV"],["77179214372967","1030036","POLO BOTTONCINI ACERO UOMO","L",4,0,"UOMO CATTIVO","CAMISERO"],["77179214368562","1030066","POLO BOTTONCINI ACERO UOMO","M",1,0,"UOMO CATTIVO","CAMISERO"],["77179214362885","1030545","POLO BOTTONCINI ACERO UOMO","S",14,0,"UOMO CATTIVO","CAMISERO"],["77179214237075","1030069","POLO BOTTONCINI CAMEL UOMO","M",1,0,"UOMO CATTIVO","CAMISERO"],["77179227774934","2631812","POLO BOTTONCINI CAMEL UOMO","S",1,0,"UOMO CATTIVO","CAMISERO"],["77179214240468","125124","POLO BOTTONCINI NEGRO UOMO","M",1,0,"UOMO CATTIVO","CAMISERO"],["77179214230355","125123","POLO BOTTONCINI NEGRO UOMO","S",1,0,"UOMO CATTIVO","CAMISERO"],["77179214168798","103005","POLO BOTTONCINI PERLA UOMO","L",1,0,"UOMO CATTIVO","CAMISERO"],["77179227814905","2323251","POLO BOTTONCINI PERLA UOMO","M",1,0,"UOMO CATTIVO","CAMISERO"],["77179227789176","2529022","POLO BOTTONCINI PERLA UOMO","S",1,0,"UOMO CATTIVO","CAMISERO"],["77179214312952","103088","POLO BOTTONCINI VERDE UOMO","S",1,0,"UOMO CATTIVO","CAMISERO"],["77377875546936","142378","POLO CHAINED NEGRO","M",49,16,"BLEZZED","POLO OV"],["77377875538412","429638","POLO CHAINED NEGRO","S",2,1,"BLEZZED","POLO OV"],["76496903159687","J01020107","POLO COLD BET BLANCO EZZETA","L",1,0,"EZZETA","POLO OV"],["76427442076948","100012","POLO CRPT BLANCO CREPANTE","M",1,0,"CREPANTE","POLO OV"],["76538488079404","C6010205","POLO CRPT NEGRO CREPANTE","L",1,0,"CREPANTE","POLO OV"],["76427435051441","0100113","POLO DARK SHADOWS GARGOLA CREPANTE","L",2,0,"CREPANTE","POLO OV"],["76427435942462","0100114","POLO DARK SHADOWS GARGOLA CREPANTE","XL",15,0,"CREPANTE","POLO OV"],["76427428358665","010113","POLO DARK SHADOWS NEGRO CREPANTE","L",49,0,"CREPANTE","POLO OV"],["76427424882189","010111","POLO DARK SHADOWS NEGRO CREPANTE","S",17,0,"CREPANTE","POLO OV"],["76427429256328","010114","POLO DARK SHADOWS NEGRO CREPANTE","XL",20,0,"CREPANTE","POLO OV"],["76522498355054","D01030326","POLO DARK STRONG BLANCO MAXETA","XXL",45,0,"MAXETA","POLO SLIM FIT"],["76522498278695","D01030306","POLO DARK STRONG NEGRO MAXETA","XXL",28,0,"MAXETA","POLO SLIM FIT"],["76427405000163","110003","POLO DARK THUNDER NEGRO CREPANTE","L",14,0,"CREPANTE","POLO OV"],["76427403282130","110001","POLO DARK THUNDER NEGRO CREPANTE","S",3,0,"CREPANTE","POLO OV"],["76427405833554","110004","POLO DARK THUNDER NEGRO CREPANTE","XL",1,0,"CREPANTE","POLO OV"],["76832729117844","DR0250450","POLO DEPORTIVO REGALO","S",40,0,"MAXETA","POLO SLIM FIT"],["76538436922681","EL010102","POLO ELECTRO BLANCO EZZETA","S",1,0,"EZZETA","POLO OV"],["76783045083036","FS056944","POLO FUEGO SAGRADO PLOMO CREPANTE","XL",8,0,"CREPANTE","POLO OV"],["77377875553186","125896","POLO HEAVELY POWER BLANCO","XL",1,0,"BLEZZED","POLO OV"],["77377875543754","742395","POLO HEAVELY POWER NEGRO","M",3,0,"BLEZZED","POLO OV"],["76616663698696","MJ010212","POLO LIGHTNING NEGRO EZZETA","L",3,0,"EZZETA","POLO OV"],["78343840860393","DF48WEF4W6F","POLO LUXURY ACERO UOMO CATTIVO","L",38,3,"UOMO CATTIVO","POLO"],["78343840854267","F8ER4E6GR4","POLO LUXURY ACERO UOMO CATTIVO","M",79,2,"UOMO CATTIVO","POLO"],["78343840847948","DGF8974G8D5R","POLO LUXURY ACERO UOMO CATTIVO","S",21,1,"UOMO CATTIVO","POLO"],["78343840865402","KHJDWBKLDLDFNBH","POLO LUXURY ACERO UOMO CATTIVO","XL",12,4,"UOMO CATTIVO","POLO"],["77877998426287","S48S47S","POLO LUXURY ARENA UOMO CATTIVO","L",106,3,"UOMO CATTIVO","POLO"],["77877998419143","L84L8L4","POLO LUXURY ARENA UOMO CATTIVO","M",368,5,"UOMO CATTIVO","POLO"],["77877998411674","T8T48T4","POLO LUXURY ARENA UOMO CATTIVO","S",74,0,"UOMO CATTIVO","POLO"],["77877998434475","N48N4N7","POLO LUXURY ARENA UOMO CATTIVO","XL",37,1,"UOMO CATTIVO","POLO"],["77877998492168","HFHBTH54596","POLO LUXURY BLANCO UOMO CATTIVO","L",44,11,"UOMO CATTIVO","POLO"],["77877998484992","WWEGGVF65","POLO LUXURY BLANCO UOMO CATTIVO","M",176,16,"UOMO CATTIVO","POLO"],["77877998479725","584K8IH59","POLO LUXURY BLANCO UOMO CATTIVO","S",39,7,"UOMO CATTIVO","POLO"],["77877998498866","DHOLFK656","POLO LUXURY BLANCO UOMO CATTIVO","XL",31,5,"UOMO CATTIVO","POLO"],["77877998422027","Ñ48Ñ4Ñ","POLO LUXURY GREY UOMO CATTIVO","M",174,6,"UOMO CATTIVO","POLO"],["77877998415671","T8T478","POLO LUXURY GREY UOMO CATTIVO","S",52,1,"UOMO CATTIVO","POLO"],["77877998434778","O48O49O","POLO LUXURY GREY UOMO CATTIVO","XL",16,2,"UOMO CATTIVO","POLO"],["77877998485524","4D8EF48EF","POLO LUXURY MARRON UOMO CATTIVO","L",95,2,"UOMO CATTIVO","POLO"],["77877998479093","545456954","POLO LUXURY MARRON UOMO CATTIVO","M",233,3,"UOMO CATTIVO","POLO"],["77877998473027","U48U596U","POLO LUXURY MARRON UOMO CATTIVO","S",89,4,"UOMO CATTIVO","POLO"],["77877998491741","4FDEHY6H5","POLO LUXURY MARRON UOMO CATTIVO","XL",45,2,"UOMO CATTIVO","POLO"],["77877998422947","J484J8J4","POLO LUXURY NEGRO UOMO CATTIVO","L",34,12,"UOMO CATTIVO","POLO"],["77877998417532","WS458W48W","POLO LUXURY NEGRO UOMO CATTIVO","M",470,21,"UOMO CATTIVO","POLO"],["77877998410832","TFG54RF85","POLO LUXURY NEGRO UOMO CATTIVO","S",88,5,"UOMO CATTIVO","POLO"],["78343840862862","SEF8RG45G","POLO LUXURY VERDE UOMO CATTIVO","L",80,6,"UOMO CATTIVO","POLO"],["78343840857679","DHAOFFLKJF","POLO LUXURY VERDE UOMO CATTIVO","M",167,2,"UOMO CATTIVO","POLO"],["78343840852353","JFHGSPIFHDOUIEH","POLO LUXURY VERDE UOMO CATTIVO","S",46,2,"UOMO CATTIVO","POLO"],["78343840868016","DOIHWDKLAFJ","POLO LUXURY VERDE UOMO CATTIVO","XL",32,1,"UOMO CATTIVO","POLO"],["77370307931055","45612365","POLO MARBEL ANGEL GARGOLA","S",2,0,"BLEZZED","POLO OV"],["77377875489004","789654","POLO MARBEL ANGEL NEGRO","L",49,16,"BLEZZED","POLO OV"],["77377875482349","145632","POLO MARBEL ANGEL NEGRO","M",137,12,"BLEZZED","POLO OV"],["76712639416138","MO01023","POLO MEMBERS ONLY PLOMO CREPANTE","M",4,0,"CREPANTE","POLO OV"],["76712639409684","MO01022","POLO MEMBERS ONLY PLOMO CREPANTE","S",7,0,"CREPANTE","POLO OV"],["76712639427630","MO01025","POLO MEMBERS ONLY PLOMO CREPANTE","XL",19,0,"CREPANTE","POLO OV"],["76538436924659","EL010106","POLO MONEY DAMON NEGRO","S",2,0,"CREPANTE","POLO OV"],["76497289473710","C010050011","POLO MONEY DAMON PLOMO RATA","S",2,0,"CREPANTE","POLO OV"],["76598729142929","NB01019","POLO NEVER BACK DOWN VERDE MAXETA","M",2,0,"MAXETA","POLO OV"],["77256841310551","3335484","POLO OUTLAW STAR BLANCO CREPANTE","S",1,0,"CREPANTE","POLO OV"],["77256841310306","3332155","POLO OUTLAW STAR NEGRO CREPANTE","L",1,0,"CREPANTE","POLO OV"],["77256841302478","3332221","POLO OUTLAW STAR NEGRO CREPANTE","S",7,0,"CREPANTE","POLO OV"],["76556679858896","CK102153","POLO OVER SET VITTORIA NEGRO","L",31,0,"UOMO CATTIVO","POLO"],["76556679854443","CK102152","POLO OVER SET VITTORIA NEGRO","M",22,0,"UOMO CATTIVO","POLO"],["76556679849818","CK102151","POLO OVER SET VITTORIA NEGRO","S",59,0,"UOMO CATTIVO","POLO"],["76496903210809","C01020006","POLO OVERLOAD BLANCO CREPANTE","M",1,0,"CREPANTE","POLO OV"],["76496903205575","C01020005","POLO OVERLOAD BLANCO CREPANTE","S",1,0,"CREPANTE","POLO OV"],["76496903163213","C01020003","POLO OVERLOAD NEGRO CREPANTE","L",29,0,"CREPANTE","POLO OV"],["76496903150958","C01020001","POLO OVERLOAD NEGRO CREPANTE","S",9,0,"CREPANTE","POLO OV"],["76496856885819","C01020004","POLO OVERLOAD NEGRO CREPANTE","XL",10,0,"CREPANTE","POLO OV"],["76833015615448","PB01022","POLO PLOMO BARRIDO CREPANTE","L",3,0,"CREPANTE","POLO OV"],["76833015611708","PB01021","POLO PLOMO BARRIDO CREPANTE","M",1,0,"CREPANTE","POLO OV"],["76833015606807","PB01020","POLO PLOMO BARRIDO CREPANTE","S",4,0,"CREPANTE","POLO OV"],["76833015618958","PB01023","POLO PLOMO BARRIDO CREPANTE","XL",14,0,"CREPANTE","POLO OV"],["76511991582462","AU0101007","POLO PRIME ACERO UOMO","L",87,8,"UOMO CATTIVO","POLO CLASICO"],["76511991575460","AU0101006","POLO PRIME ACERO UOMO","M",150,12,"UOMO CATTIVO","POLO CLASICO"],["76511991567630","AU0101005","POLO PRIME ACERO UOMO","S",75,2,"UOMO CATTIVO","POLO CLASICO"],["76511991589050","AU0101008","POLO PRIME ACERO UOMO","XL",142,5,"UOMO CATTIVO","POLO CLASICO"],["76770813718810","PA010232","POLO PRIME ARENA UOMO","L",130,1,"UOMO CATTIVO","POLO CLASICO"],["76770813712530","PA010231","POLO PRIME ARENA UOMO","M",211,2,"UOMO CATTIVO","POLO CLASICO"],["76770813705755","PA010230","POLO PRIME ARENA UOMO","S",68,0,"UOMO CATTIVO","POLO CLASICO"],["76770813724388","PA010233","POLO PRIME ARENA UOMO","XL",78,1,"UOMO CATTIVO","POLO CLASICO"],["76511991579469","AU0101003","POLO PRIME BLANCO UOMO","L",477,18,"UOMO CATTIVO","POLO CLASICO"],["76511991574277","AU0101002","POLO PRIME BLANCO UOMO","M",925,14,"UOMO CATTIVO","POLO CLASICO"],["76511991566148","AU0101001","POLO PRIME BLANCO UOMO","S",286,3,"UOMO CATTIVO","POLO CLASICO"],["76511991585916","AU0101004","POLO PRIME BLANCO UOMO","XL",97,3,"UOMO CATTIVO","POLO CLASICO"],["76511991640050","AU0101015","POLO PRIME CAMEL UOMO","L",50,0,"UOMO CATTIVO","POLO CLASICO"],["76511991635824","AU0101014","POLO PRIME CAMEL UOMO","M",102,4,"UOMO CATTIVO","POLO CLASICO"],["76511991631897","AU0101013","POLO PRIME CAMEL UOMO","S",27,0,"UOMO CATTIVO","POLO CLASICO"],["76511991644168","AU0101016","POLO PRIME CAMEL UOMO","XL",75,0,"UOMO CATTIVO","POLO CLASICO"],["76511991635649","AU0101011","POLO PRIME CEMENTO UOMO","L",105,4,"UOMO CATTIVO","POLO CLASICO"],["76511991631363","AU0101010","POLO PRIME CEMENTO UOMO","M",134,1,"UOMO CATTIVO","POLO CLASICO"],["76511991624170","AU0101009","POLO PRIME CEMENTO UOMO","S",138,0,"UOMO CATTIVO","POLO CLASICO"],["76511991640438","AU0101012","POLO PRIME CEMENTO UOMO","XL",140,1,"UOMO CATTIVO","POLO CLASICO"],["78256979028860","RF484G","POLO PRIME MELANGE UOMO","L",50,3,"UOMO CATTIVO","POLO CLASICO"],["78256979018863","RF6854RF65","POLO PRIME MELANGE UOMO","M",105,4,"UOMO CATTIVO","POLO CLASICO"],["78256979010572","FIOJWOPI","POLO PRIME MELANGE UOMO","S",25,1,"UOMO CATTIVO","POLO CLASICO"],["78256979023471","RE84GRE8G4","POLO PRIME MELANGE UOMO","XL",26,0,"UOMO CATTIVO","POLO CLASICO"],["76511991647767","AU0101019","POLO PRIME MELON UOMO","L",100,0,"UOMO CATTIVO","POLO CLASICO"],["76511991640981","AU0101018","POLO PRIME MELON UOMO","M",163,2,"UOMO CATTIVO","POLO CLASICO"],["76511991634236","AU0101017","POLO PRIME MELON UOMO","S",51,1,"UOMO CATTIVO","POLO CLASICO"],["76511991653897","AU0101020","POLO PRIME MELON UOMO","XL",46,0,"UOMO CATTIVO","POLO CLASICO"],["76511991578431","UC011003","POLO PRIME NEGRO UOMO","L",358,20,"UOMO CATTIVO","POLO CLASICO"],["76511991574419","UC011002","POLO PRIME NEGRO UOMO","M",1223,21,"UOMO CATTIVO","POLO CLASICO"],["76511991565884","UC011001","POLO PRIME NEGRO UOMO","S",573,5,"UOMO CATTIVO","POLO CLASICO"],["76511991582199","UC011004","POLO PRIME NEGRO UOMO","XL",82,9,"UOMO CATTIVO","POLO CLASICO"],["76842298780382","PV010213","POLO PRIME V ACERO CATTIVO","L",52,1,"UOMO CATTIVO","POLO CLASICO"],["76842298774561","PV010212","POLO PRIME V ACERO CATTIVO","M",74,0,"UOMO CATTIVO","POLO CLASICO"],["76842298770939","PV010211","POLO PRIME V ACERO CATTIVO","S",28,0,"UOMO CATTIVO","POLO CLASICO"],["76842298784802","PV010214","POLO PRIME V ACERO CATTIVO","XL",49,0,"UOMO CATTIVO","POLO CLASICO"],["76842298831846","PV010221","POLO PRIME V ARENA CATTIVO","L",26,1,"UOMO CATTIVO","POLO CLASICO"],["76842298828525","PV010220","POLO PRIME V ARENA CATTIVO","M",1,0,"UOMO CATTIVO","POLO CLASICO"],["76842298824637","PV010219","POLO PRIME V ARENA CATTIVO","S",18,0,"UOMO CATTIVO","POLO CLASICO"],["76842298836457","PV010222","POLO PRIME V ARENA CATTIVO","XL",34,0,"UOMO CATTIVO","POLO CLASICO"],["76842298781415","PV010205","POLO PRIME V BLANCO CATTIVO","L",2,0,"UOMO CATTIVO","POLO CLASICO"],["76842298776001","PV010204","POLO PRIME V BLANCO CATTIVO","M",13,0,"UOMO CATTIVO","POLO CLASICO"],["76842298770159","PV010203","POLO PRIME V BLANCO CATTIVO","S",6,0,"UOMO CATTIVO","POLO CLASICO"],["76842298786345","PV010206","POLO PRIME V BLANCO CATTIVO","XL",15,0,"UOMO CATTIVO","POLO CLASICO"],["76842298828810","PV010216","POLO PRIME V CAMEL CATTIVO","M",1,0,"UOMO CATTIVO","POLO CLASICO"],["76842298824093","PV010215","POLO PRIME V CAMEL CATTIVO","S",13,0,"UOMO CATTIVO","POLO CLASICO"],["76842298839879","PV010218","POLO PRIME V CAMEL CATTIVO","XL",32,0,"UOMO CATTIVO","POLO CLASICO"],["78110869317895","EPOJFP","POLO PRIME V CEMENTO CATTIVO","L",21,0,"UOMO CATTIVO","POLO CLASICO"],["78110869310137","WPOEKQ","POLO PRIME V CEMENTO CATTIVO","M",37,0,"UOMO CATTIVO","POLO CLASICO"],["78110869298372","HIEUH","POLO PRIME V CEMENTO CATTIVO","S",11,0,"UOMO CATTIVO","POLO CLASICO"],["78110869324401","DPIRJQERF","POLO PRIME V CEMENTO CATTIVO","XL",11,0,"UOMO CATTIVO","POLO CLASICO"],["78256979022408","E4R8G4ER","POLO PRIME V MELANGE CATTIVO","L",136,0,"UOMO CATTIVO","POLO CLASICO"],["78256979026701","W4E8F48G4","POLO PRIME V MELANGE CATTIVO","M",209,0,"UOMO CATTIVO","POLO CLASICO"],["78256979012943","YTH84TRY8","POLO PRIME V MELANGE CATTIVO","S",71,0,"UOMO CATTIVO","POLO CLASICO"],["78256979017888","H4T8R4HTY8","POLO PRIME V MELANGE CATTIVO","XL",67,0,"UOMO CATTIVO","POLO CLASICO"],["76842298773633","PV010208","POLO PRIME V NEGRO CATTIVO","M",4,0,"UOMO CATTIVO","POLO CLASICO"],["76427481676902","201003","POLO REBEL SOUL BLANCO EZZETA","L",9,0,"EZZETA","POLO OV"],["76427454674249","20003","POLO REBEL SOUL GARGOLA EZZETA","L",4,0,"EZZETA","POLO OV"],["76556679688170","ST0102030","POLO SET CLASSIC SIGNORILE NEGRO UOMO","L",32,0,"UOMO CATTIVO","POLO"],["76556679682273","ST0102029","POLO SET CLASSIC SIGNORILE NEGRO UOMO","M",89,0,"UOMO CATTIVO","POLO"],["76556679675354","ST0102028","POLO SET CLASSIC SIGNORILE NEGRO UOMO","S",60,0,"UOMO CATTIVO","POLO"],["76556679694064","ST0102031","POLO SET CLASSIC SIGNORILE NEGRO UOMO","XL",53,0,"UOMO CATTIVO","POLO"],["76556679682846","ST0102034","POLO SET CLASSIC SIGNORILE PERLA UOMO","L",40,0,"UOMO CATTIVO","POLO"],["76556679678164","ST0102033","POLO SET CLASSIC SIGNORILE PERLA UOMO","M",84,0,"UOMO CATTIVO","POLO"],["76556679673580","ST0102032","POLO SET CLASSIC SIGNORILE PERLA UOMO","S",27,0,"UOMO CATTIVO","POLO"],["76556679689708","ST0102035","POLO SET CLASSIC SIGNORILE PERLA UOMO","XL",27,0,"UOMO CATTIVO","POLO"],["76427417934855","111101","POLO SKULL BET BLANCO CREPANTE","S",1,0,"CREPANTE","POLO OV"],["76433941298874","010211","POLO SKULL BET NEGRO CREPANTE","S",2,0,"CREPANTE","POLO OV"],["75648832602490","M00130","POLO SMART AZUL MAXETA","M",11,6,"MAXETA","POLO SLIM FIT"],["75648832606386","M00129","POLO SMART AZUL MAXETA","S",8,3,"MAXETA","POLO SLIM FIT"],["75648832611262","M00132","POLO SMART AZUL MAXETA","XL",106,3,"MAXETA","POLO SLIM FIT"],["76166851944859","M000137","POLO SMART AZUL MAXETA","XXL",25,1,"MAXETA","POLO SLIM FIT"],["75648832610877","M00127","POLO SMART BLANCO MAXETA","L",192,3,"MAXETA","POLO SLIM FIT"],["75648832617279","M00126","POLO SMART BLANCO MAXETA","M",317,5,"MAXETA","POLO SLIM FIT"],["75648832622327","M00125","POLO SMART BLANCO MAXETA","S",120,4,"MAXETA","POLO SLIM FIT"],["75648832627280","M00128","POLO SMART BLANCO MAXETA","XL",411,0,"MAXETA","POLO SLIM FIT"],["76166866750583","M000129","POLO SMART BLANCO MAXETA","XXL",181,2,"MAXETA","POLO SLIM FIT"],["75648832605645","M00138","POLO SMART GARGOLA MAXETA","M",1,0,"MAXETA","POLO SLIM FIT"],["75648832609986","M00137","POLO SMART GARGOLA MAXETA","S",116,6,"MAXETA","POLO SLIM FIT"],["75648832614005","M00140","POLO SMART GARGOLA MAXETA","XL",62,1,"MAXETA","POLO SLIM FIT"],["76166869128261","M000140","POLO SMART GARGOLA MAXETA","XXL",62,2,"MAXETA","POLO SLIM FIT"],["75648832658223","M00146","POLO SMART GRAFITO MAXETA","M",9,5,"MAXETA","POLO SLIM FIT"],["75648832662752","M00145","POLO SMART GRAFITO MAXETA","S",32,5,"MAXETA","POLO SLIM FIT"],["75648832667668","M00148","POLO SMART GRAFITO MAXETA","XL",42,3,"MAXETA","POLO SLIM FIT"],["76166871113409","M000148","POLO SMART GRAFITO MAXETA","XXL",62,1,"MAXETA","POLO SLIM FIT"],["75648832661086","M00123","POLO SMART NEGRO MAXETA","L",139,25,"MAXETA","POLO SLIM FIT"],["75648832667297","M00122","POLO SMART NEGRO MAXETA","M",196,6,"MAXETA","POLO SLIM FIT"],["75648832672616","M00121","POLO SMART NEGRO MAXETA","S",94,11,"MAXETA","POLO SLIM FIT"],["75648832678059","M00124","POLO SMART NEGRO MAXETA","XL",76,5,"MAXETA","POLO SLIM FIT"],["77837940144183","1234567","POLO SMART NEGRO S/E","L",34,0,"MAXETA","POLO"],["75648832671208","M00151","POLO SMART ROSA BEIGE MAXETA","L",27,7,"MAXETA","POLO SLIM FIT"],["75648832678080","M00150","POLO SMART ROSA BEIGE MAXETA","M",5,1,"MAXETA","POLO SLIM FIT"],["75648832683647","M00149","POLO SMART ROSA BEIGE MAXETA","S",28,2,"MAXETA","POLO SLIM FIT"],["75648832688900","M00152","POLO SMART ROSA BEIGE MAXETA","XL",45,2,"MAXETA","POLO SLIM FIT"],["76166874461645","M000152","POLO SMART ROSA BEIGE MAXETA","XXL",20,0,"MAXETA","POLO SLIM FIT"],["75648832713210","M00142","POLO SMART VERDE MAXETA","M",17,3,"MAXETA","POLO SLIM FIT"],["75648832717144","M00141","POLO SMART VERDE MAXETA","S",15,3,"MAXETA","POLO SLIM FIT"],["75648832720857","M00144","POLO SMART VERDE MAXETA","XL",40,6,"MAXETA","POLO SLIM FIT"],["76166876481004","M000144","POLO SMART VERDE MAXETA","XXL",37,1,"MAXETA","POLO SLIM FIT"],["75648832729572","M00135","POLO SMART VINO MAXETA","L",72,6,"MAXETA","POLO SLIM FIT"],["75648832735284","M00134","POLO SMART VINO MAXETA","M",78,3,"MAXETA","POLO SLIM FIT"],["75648832741297","M00133","POLO SMART VINO MAXETA","S",72,1,"MAXETA","POLO SLIM FIT"],["75648832746837","M00136","POLO SMART VINO MAXETA","XL",43,1,"MAXETA","POLO SLIM FIT"],["76166878117553","M000136","POLO SMART VINO MAXETA","XXL",64,1,"MAXETA","POLO SLIM FIT"],["76712639421166","MO01028","POLO STREET MONEY NEGRO CREPANTE","L",17,0,"CREPANTE","POLO OV"],["76712639425492","MO01029","POLO STREET MONEY NEGRO CREPANTE","XL",9,0,"CREPANTE","POLO OV"],["76783045004165","SC055804","POLO STREET SCARS ARENA EZZETA","XL",2,0,"EZZETA","POLO OV"],["78309281558947","ERG88ERG4","POLO SUPREMO GARGOLA UOMO","L",59,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281553203","D654ER68G","POLO SUPREMO GARGOLA UOMO","M",90,2,"UOMO CATTIVO","POLO BOXYFIT"],["78309281544247","G54GT5T8G4E5G","POLO SUPREMO GARGOLA UOMO","S",27,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281564403","LEIJEIFJEFD","POLO SUPREMO GARGOLA UOMO","XL",29,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281552707","GTH485YH4","POLO SUPREMO NEGRO UOMO","L",138,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281546760","RF1465WRF4","POLO SUPREMO NEGRO UOMO","M",204,5,"UOMO CATTIVO","POLO BOXYFIT"],["78309281539379","F454FRFR65","POLO SUPREMO NEGRO UOMO","S",67,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281559090","ERGERGERG5","POLO SUPREMO NEGRO UOMO","XL",66,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281555887","FIOJWFOIWF","POLO SUPREMO PERLA UOMO","L",63,0,"UOMO CATTIVO","POLO BOXYFIT"],["78309281549873","OEDIHEIOPWEJ","POLO SUPREMO PERLA UOMO","M",94,3,"UOMO CATTIVO","POLO BOXYFIT"],["78309281541211","JFIPRHFSE","POLO SUPREMO PERLA UOMO","S",30,1,"UOMO CATTIVO","POLO BOXYFIT"],["78309281562435","FIHFIWEF5F","POLO SUPREMO PERLA UOMO","XL",31,0,"UOMO CATTIVO","POLO BOXYFIT"],["77370223190786","25898743","POLO THORN MASK NEGRO","M",51,13,"BLEZZED","POLO OV"],["77370223136147","3698521","POLO URBAN BLOOD BEIGE","S",1,0,"BLEZZED","POLO OV"],["77377875646065","852951","POLO URBAN BLOOD BLANCO","XL",1,0,"BLEZZED","POLO OV"],["77377875623769","147596","POLO URBAN BLOOD NEGRO","M",17,12,"BLEZZED","POLO OV"],["74827815598281","G005","POSTERS GALLO NEGRO","P",8,0,"GALLO NEGRO","POSTERS"],["76537492856952","78569521PP2","PRUEBA 2","L",97,0,"UOMO CATTIVO","JOGGER LQD"],["77229345128418","MMM1919","PRUEBA 2","M",100,0,"UOMO CATTIVO","JOGGER LQD"],["76927680481320","CK25307","PULSERA RGL","",1,0,"EZZETA","LENTES"],["74605310919561","M00859","SHAKER MAXETA NEGRO MAXETA","",2,0,"MAXETA","SHAKER"],["76711697624182","AF010203","SHORT ACIDWASH FOCALIZADO MAXETA","L",1,0,"MAXETA","SHORT"],["76711697617802","AF010202","SHORT ACIDWASH FOCALIZADO MAXETA","M",16,0,"MAXETA","SHORT"],["76711697611739","AF010201","SHORT ACIDWASH FOCALIZADO MAXETA","S",6,0,"MAXETA","SHORT"],["77336346706357","MAXPRIME1340","SHORT BASSIC NEGRO MAXETA","M",3,0,"MAXETA","SHORT SIN BOLSILLO"],["77336346710657","MAXPRIME1341","SHORT BASSIC NEGRO MAXETA","S",4,0,"MAXETA","SHORT SIN BOLSILLO"],["77336346710480","MAXPRIME1342","SHORT BASSIC ROYAL MAXETA","L",1,0,"MAXETA","SHORT SIN BOLSILLO"],["74605308982462","M00515","SHORT CONFORT 2.0 LADRILLO MAXETA","S",9,0,"MAXETA","SHORT"],["74605308955445","M00514","SHORT CONFORT 2.0 ROJO MAXETA","XL",4,0,"MAXETA","SHORT"],["74605308985353","M00519","SHORT CONFORT 2.0 VINO MAXETA","S",2,0,"MAXETA","SHORT"],["74605308694963","M00455","SHORT CONFORT AZUL OSCURO MAXETA","S",4,0,"MAXETA","SHORT"],["74605308813046","M00479","SHORT CONFORT COBALTO MAXETA","S",23,0,"MAXETA","SHORT"],["74605308648484","M00447","SHORT CONFORT GARGOLA OSCURO MAXETA","S",1,0,"MAXETA","SHORT"],["74605308721823","M00463","SHORT CONFORT LADRILLO MAXETA","S",23,0,"MAXETA","SHORT"],["74605308703065","M00459","SHORT CONFORT ROJO MAXETA","S",50,0,"MAXETA","SHORT"],["74605308719173","M00462","SHORT CONFORT ROJO MAXETA","XL",28,0,"MAXETA","SHORT"],["74605308780993","M00476","SHORT CONFORT VERDE MAXETA","M",1,0,"MAXETA","SHORT"],["74605308776701","M00475","SHORT CONFORT VERDE MAXETA","S",4,0,"MAXETA","SHORT"],["74605308755150","M00467","SHORT CONFORT VINO MAXETA","S",26,0,"MAXETA","SHORT"],["74605308557890","M00427","SHORT NEW SPORT COBALTO MAXETA","S",13,0,"MAXETA","SHORT"],["74605308570484","M00430","SHORT NEW SPORT COBALTO MAXETA","XL",65,0,"MAXETA","SHORT"],["74605308591573","M00435","SHORT NEW SPORT ROJO MAXETA","S",36,0,"MAXETA","SHORT"],["74605308608029","M00438","SHORT NEW SPORT ROJO MAXETA","XL",94,0,"MAXETA","SHORT"],["74605308629581","M00442","SHORT NEW SPORT VERDE MAXETA","XL",3,0,"MAXETA","SHORT"],["74605308580709","M00431","SHORT NEW SPORT VINO MAXETA","S",11,0,"MAXETA","SHORT"],["74605308596399","M00434","SHORT NEW SPORT VINO MAXETA","XL",11,0,"MAXETA","SHORT"],["77336346619164","MAXPRIME1327","SHORT POCKET NEGRO MAXETA","M",3,0,"MAXETA","SHORT CON BOLSILLO"],["77336346624067","MAXPRIME1328","SHORT POCKET NEGRO MAXETA","S",5,0,"MAXETA","SHORT CON BOLSILLO"],["77336346615546","MAXPRIME1330","SHORT POCKET PLOMO MAXETA","S",1,0,"MAXETA","SHORT CON BOLSILLO"],["77336346626474","MAXPRIME1332","SHORT POCKET UVA MAXETA","S",1,0,"MAXETA","SHORT CON BOLSILLO"],["74605310585110","M00797","SHORT SET SCULP MARRON MAXETA","L",1,0,"MAXETA","SHORT WOMENS"],["74605310575031","M00795","SHORT SET SCULP MARRON MAXETA","S",1,0,"MAXETA","SHORT WOMENS"],["74605310531302","M00785","SHORT SET SCULP NEGRO MAXETA","L",62,0,"MAXETA","SHORT WOMENS"],["74605310520118","M00783","SHORT SET SCULP NEGRO MAXETA","S",81,0,"MAXETA","SHORT WOMENS"],["74605310613157","M00800","SHORT SET SCULP PLOMO RATA MAXETA","L",1,0,"MAXETA","SHORT WOMENS"],["76556679797298","CK102144","SHORT SET VITTORIA BEIGE","M",14,0,"UOMO CATTIVO","SHORT"],["76556679792227","CK102143","SHORT SET VITTORIA BEIGE","S",7,0,"UOMO CATTIVO","SHORT"],["76556679809079","CK102146","SHORT SET VITTORIA BEIGE","XL",1,0,"UOMO CATTIVO","SHORT"],["76556679743662","CK102137","SHORT SET VITTORIA NEGRO","L",36,0,"UOMO CATTIVO","SHORT"],["76556679739426","CK102136","SHORT SET VITTORIA NEGRO","M",5,0,"UOMO CATTIVO","SHORT"],["76556679735279","CK102135","SHORT SET VITTORIA NEGRO","S",41,0,"UOMO CATTIVO","SHORT"],["75648597875498","M00396","SHORT SMART AZUL MAXETA","M",68,3,"MAXETA","SHORT"],["75648597881386","M00395","SHORT SMART AZUL MAXETA","S",95,1,"MAXETA","SHORT"],["75648597887004","M00398","SHORT SMART AZUL MAXETA","XL",13,1,"MAXETA","SHORT"],["75648597868527","M00393","SHORT SMART BLANCO MAXETA","L",188,1,"MAXETA","SHORT"],["75648597876900","M00392","SHORT SMART BLANCO MAXETA","M",316,1,"MAXETA","SHORT"],["75648597881247","M00391","SHORT SMART BLANCO MAXETA","S",62,0,"MAXETA","SHORT"],["75648597885246","M00394","SHORT SMART BLANCO MAXETA","XL",248,0,"MAXETA","SHORT"],["75648597874516","M00404","SHORT SMART GARGOLA MAXETA","M",111,0,"MAXETA","SHORT"],["75648597881309","M00403","SHORT SMART GARGOLA MAXETA","S",29,1,"MAXETA","SHORT"],["75648597887251","M00406","SHORT SMART GARGOLA MAXETA","XL",6,0,"MAXETA","SHORT"],["75648597933383","M00413","SHORT SMART GRAFITO MAXETA","L",12,1,"MAXETA","SHORT"],["75648597939506","M00412","SHORT SMART GRAFITO MAXETA","M",58,1,"MAXETA","SHORT"],["75648597944773","M00411","SHORT SMART GRAFITO MAXETA","S",74,0,"MAXETA","SHORT"],["75648597949936","M00414","SHORT SMART GRAFITO MAXETA","XL",25,1,"MAXETA","SHORT"],["75648597940742","M00388","SHORT SMART NEGRO MAXETA","M",98,1,"MAXETA","SHORT"],["75648597945856","M00387","SHORT SMART NEGRO MAXETA","S",115,3,"MAXETA","SHORT"],["75648597940998","M00417","SHORT SMART ROSA BEIGE MAXETA","L",10,0,"MAXETA","SHORT"],["75648597949047","M00416","SHORT SMART ROSA BEIGE MAXETA","M",103,0,"MAXETA","SHORT"],["75648597954734","M00415","SHORT SMART ROSA BEIGE MAXETA","S",98,2,"MAXETA","SHORT"],["75648597960359","M00418","SHORT SMART ROSA BEIGE MAXETA","XL",80,0,"MAXETA","SHORT"],["75648597996202","M00408","SHORT SMART VERDE MAXETA","M",157,2,"MAXETA","SHORT"],["75648598001059","M00407","SHORT SMART VERDE MAXETA","S",43,1,"MAXETA","SHORT"],["75648598006255","M00410","SHORT SMART VERDE MAXETA","XL",14,1,"MAXETA","SHORT"],["75648597991863","M00401","SHORT SMART VINO MAXETA","L",126,0,"MAXETA","SHORT"],["75648597995803","M00400","SHORT SMART VINO MAXETA","M",58,1,"MAXETA","SHORT"],["75648597999989","M00399","SHORT SMART VINO MAXETA","S",52,0,"MAXETA","SHORT"],["75648598005500","M00402","SHORT SMART VINO MAXETA","XL",71,1,"MAXETA","SHORT"],["75073573485875","75073573485875","TOP BASIC BLANCO  MAXETA","XL",2,0,"MAXETA","TOP WOMENS"],["74605310103653","M00738","TOP BASIC GARGOLA MAXETA","S",21,0,"MAXETA","TOP WOMENS"],["74605310128862","M00743","TOP BASIC MELANGE MAXETA","L",1,0,"MAXETA","TOP WOMENS"],["74605310114149","M00741","TOP BASIC MELANGE MAXETA","S",10,0,"MAXETA","TOP WOMENS"],["76408714957822","PLRA12345","TOP BASIC PLOMO RATA MAXETA","S",2,0,"MAXETA","TOP WOMENS"],["74605310104985","M00737","TOP BASIC VERDE MAXETA","L",16,0,"MAXETA","TOP WOMENS"],["74605310218616","M00749","TOP RICE BLANCO  MAXETA","L",14,0,"MAXETA","TOP WOMENS"],["74605310301147","M00756","TOP RICE GARGOLA MAXETA","S",25,0,"MAXETA","TOP WOMENS"],["74605310345001","M00761","TOP RICE MELANGE MAXETA","L",19,0,"MAXETA","TOP WOMENS"],["74605310317321","M00759","TOP RICE MELANGE MAXETA","S",17,0,"MAXETA","TOP WOMENS"],["74605310255924","M00752","TOP RICE PALO ROSA MAXETA","L",11,0,"MAXETA","TOP WOMENS"],["76555350791369","TOPR189321","TOP RICE PLOMO RATA MAXETA","L",16,0,"MAXETA","TOP WOMENS"],["76410706328415","TOPPLORAT01","TOP RICE PLOMO RATA MAXETA","S",10,0,"MAXETA","TOP WOMENS"],["74605310307924","M00755","TOP RICE VERDE MAXETA","L",44,0,"MAXETA","TOP WOMENS"],["74605310300015","M00754","TOP RICE VERDE MAXETA","M",21,0,"MAXETA","TOP WOMENS"],["74605310294025","M00753","TOP RICE VERDE MAXETA","S",10,0,"MAXETA","TOP WOMENS"],["74605310417173","M00767","TOP SET SCULP AZUL MAXETA","L",74,0,"MAXETA","TOP WOMENS"],["74605310408864","M00766","TOP SET SCULP AZUL MAXETA","M",39,0,"MAXETA","TOP WOMENS"],["74605310397725","M00765","TOP SET SCULP AZUL MAXETA","S",26,0,"MAXETA","TOP WOMENS"],["74605310477233","M00776","TOP SET SCULP MARRON MAXETA","L",95,0,"MAXETA","TOP WOMENS"],["74605310472090","M00775","TOP SET SCULP MARRON MAXETA","M",40,0,"MAXETA","TOP WOMENS"],["74605310466823","M00774","TOP SET SCULP MARRON MAXETA","S",24,0,"MAXETA","TOP WOMENS"],["74605310456348","M00773","TOP SET SCULP MELANGE MAXETA","L",10,0,"MAXETA","TOP WOMENS"],["74605310510401","M00782","TOP SET SCULP MORADO MAXETA","L",3,0,"MAXETA","TOP WOMENS"],["74605310498872","M00780","TOP SET SCULP MORADO MAXETA","S",4,0,"MAXETA","TOP WOMENS"],["74605310385499","M00764","TOP SET SCULP NEGRO MAXETA","L",50,1,"MAXETA","TOP WOMENS"],["74605310375126","M00762","TOP SET SCULP NEGRO MAXETA","S",39,0,"MAXETA","TOP WOMENS"],["74605310420493","M00770","TOP SET SCULP PALO ROSA MAXETA","L",108,0,"MAXETA","TOP WOMENS"],["74605310415520","M00769","TOP SET SCULP PALO ROSA MAXETA","M",46,0,"MAXETA","TOP WOMENS"],["74605310410280","M00768","TOP SET SCULP PALO ROSA MAXETA","S",45,0,"MAXETA","TOP WOMENS"],["74605310479620","M00779","TOP SET SCULP PLOMO RATA MAXETA","L",49,0,"MAXETA","TOP WOMENS"],["74605310474307","M00778","TOP SET SCULP PLOMO RATA MAXETA","M",58,0,"MAXETA","TOP WOMENS"],["74605310468816","M00777","TOP SET SCULP PLOMO RATA MAXETA","S",38,0,"MAXETA","TOP WOMENS"],["77336346743929","MAXPRIME1344","TOP SPORT ALUMINIO MAXETA","L",1,0,"MAXETA","TOP"],["77336346793470","MAXPRIME1351","TOP SPORT MENTA MAXETA","L",1,0,"MAXETA","TOP"],["77336346737771","MAXPRIME1346","TOP SPORT NEGRO MAXETA","L",1,0,"MAXETA","TOP"]];
+// tuple index: 0 barcode, 1 sku, 2 producto, 3 variante, 4 stock, 5 despachar, 6 marca, 7 tipo
+let PRODUCTS = PRODUCTS_DEFAULT;
+
+const byBarcode = new Map();
+const bySku = new Map();
+function rebuildProductMaps(){
+  byBarcode.clear();
+  bySku.clear();
+  PRODUCTS.forEach(p=>{
+    if(p[0]) byBarcode.set(p[0], p);
+    if(p[1]) bySku.set(p[1], p);
+  });
+}
+rebuildProductMaps();
+
+const STORAGE_KEY = 'conteo-actual';
+let counted = {}; // key: barcode -> {sku,producto,variante,stock,despachar,marca,tipo,encontrado,ts}
+let currentProduct = null;
+
+const el = id => document.getElementById(id);
+const foundInput = el('foundInput');
+const diffBanner = el('diffBanner');
+const resultsBody = el('resultsBody');
+const emptyMsg = el('emptyMsg');
+const toast = el('toast');
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toast.classList.remove('show'), 1800);
+}
+
+async function loadCounted(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if(res && res.value){
+      counted = JSON.parse(res.value);
+    }
+  }catch(e){ counted = {}; }
+  renderTable();
+  renderWorklist();
+  renderDiferencias();
+  renderCharts();
+}
+
+async function saveCounted(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(counted), true);
+  }catch(e){ console.error('storage error', e); }
+}
+
+function findProduct(codeRaw){
+  const code = (codeRaw||'').trim();
+  if(!code) return null;
+  return byBarcode.get(code) || bySku.get(code) || null;
+}
+
+// ===================== TABS =====================
+const tabButtons = document.querySelectorAll('.tab-btn');
+const pages = document.querySelectorAll('.page');
+function goToTab(tab){
+  tabButtons.forEach(b=> b.classList.toggle('active', b.dataset.tab === tab));
+  pages.forEach(p=> p.classList.toggle('active', p.id === 'page-' + tab));
+  if(tab === 'metricas'){ renderCharts(); }
+  if(tab === 'diferencias'){ renderDiferencias(); }
+}
+tabButtons.forEach(b=>{
+  b.addEventListener('click', ()=> goToTab(b.dataset.tab));
+});
+
+// ===================== SHOW PRODUCT =====================
+function openModal(){ el('modalOverlay').classList.add('open'); }
+function closeModal(){ el('modalOverlay').classList.remove('open'); currentProduct = null; }
+
+function showProduct(p, opts){
+  opts = opts || {};
+  const [barcode, sku, producto, variante, stock, despachar, marca, tipo] = p;
+  const existing = counted[barcode];
+  if(existing && !opts.skipDoubleCheck){
+    const seguir = confirm(
+      `⚠️ ESTE SKU YA FUE CONTADO\n\n` +
+      `${producto}${variante ? ' · Talla ' + variante : ''}\n` +
+      `SKU ${sku}\n` +
+      `Contado por: ${existing.contadoPor || '—'}\n` +
+      `Cantidad registrada: ${existing.encontrado} (sistema: ${existing.stock})\n\n` +
+      `¿Seguro que querés volver a contarlo? Si es por una diferencia detectada, hacé el reconteo desde la pestaña Diferencias.`
+    );
+    if(!seguir) return;
+  }
+  currentProduct = p;
+  el('pProducto').textContent = producto;
+  el('pMeta').textContent = `SKU ${sku}${variante ? ' · Talla ' + variante : ''} · Código ${barcode}`;
+  el('pTags').innerHTML = `${marca ? `<span class="prod-tag">🏷 ${marca}</span>` : ''}${tipo ? `<span class="prod-tag">📦 ${tipo}</span>` : ''}`;
+  el('pStock').textContent = stock;
+  el('pDespachar').textContent = despachar;
+  foundInput.value = 0;
+  el('locSistema').value = existing && existing.locSistema ? existing.locSistema : '';
+  el('locFisica').value = existing && existing.locFisica ? existing.locFisica : '';
+  el('locFields').classList.remove('open');
+  el('locToggle').textContent = '+ Verificar ubicación (para ERU)';
+  updateDiffBanner();
+  openModal();
+  setTimeout(()=>{ foundInput.focus(); foundInput.select(); }, 30);
+}
+
+el('modalCloseBtn').addEventListener('click', closeModal);
+el('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id === 'modalOverlay') closeModal(); });
+
+el('locToggle').addEventListener('click', ()=>{
+  const fields = el('locFields');
+  const open = fields.classList.toggle('open');
+  el('locToggle').textContent = open ? '− Ocultar ubicación' : '+ Verificar ubicación (para ERU)';
+});
+
+function updateDiffBanner(){
+  if(!currentProduct) return;
+  const stock = currentProduct[4];
+  const found = parseInt(foundInput.value || '0', 10);
+  const diff = found - stock;
+  diffBanner.style.display = 'flex';
+  if(diff === 0){
+    diffBanner.className = 'diff-banner diff-ok';
+    diffBanner.textContent = `✓ Coincide con el sistema (${stock} unidades)`;
+  } else if(diff > 0){
+    diffBanner.className = 'diff-banner diff-over';
+    diffBanner.textContent = `▲ Sobrante de ${diff} unidad(es) — sistema dice ${stock}, contaste ${found}`;
+  } else {
+    diffBanner.className = 'diff-banner diff-under';
+    diffBanner.textContent = `▼ Falta ${Math.abs(diff)} unidad(es) — sistema dice ${stock}, contaste ${found}`;
+  }
+}
+
+foundInput.addEventListener('input', updateDiffBanner);
+el('minusBtn').addEventListener('click', ()=>{
+  foundInput.value = Math.max(0, (parseInt(foundInput.value||'0',10) - 1));
+  updateDiffBanner();
+});
+el('plusBtn').addEventListener('click', ()=>{
+  foundInput.value = (parseInt(foundInput.value||'0',10) + 1);
+  updateDiffBanner();
+});
+
+el('saveBtn').addEventListener('click', async ()=>{
+  if(!currentProduct) return;
+  const [barcode, sku, producto, variante, stock, despachar, marca, tipo] = currentProduct;
+  const found = parseInt(foundInput.value || '0', 10);
+  const locSistema = el('locSistema').value.trim();
+  const locFisica = el('locFisica').value.trim();
+  counted[barcode] = { sku, producto, variante, stock, despachar, marca, tipo, encontrado: found, locSistema, locFisica, ts: Date.now(), contadoPor: currentUser ? currentUser.nombre : '' };
+  await saveCounted();
+  renderTable();
+  renderWorklist();
+  renderDiferencias();
+  renderCharts();
+  showToast('Conteo registrado');
+  closeModal();
+});
+
+function diffClass(diff){
+  if(diff === 0) return {cls:'badge-ok', label:'OK'};
+  if(diff > 0) return {cls:'badge-over', label:'+'+diff};
+  return {cls:'badge-under', label:diff};
+}
+
+function kpiTier(pct){
+  if(pct >= 95) return 'good';
+  if(pct >= 90) return 'warn';
+  return 'bad';
+}
+
+function renderTable(){
+  const entries = Object.entries(counted).sort((a,b)=>b[1].ts - a[1].ts);
+  resultsBody.innerHTML = '';
+  if(entries.length === 0){
+    emptyMsg.style.display = 'block';
+    document.getElementById('resultsTable').style.display = 'none';
+  } else {
+    emptyMsg.style.display = 'none';
+    document.getElementById('resultsTable').style.display = 'table';
+    entries.forEach(([barcode, item])=>{
+      const diff = item.encontrado - item.stock;
+      const dc = diffClass(diff);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="font-family:'Roboto Mono',monospace;">${item.sku}</td>
+        <td>${item.producto}</td>
+        <td>${item.variante || '—'}</td>
+        <td>${item.stock}</td>
+        <td>${item.encontrado}</td>
+        <td><span class="badge ${dc.cls}">${dc.label}</span></td>
+        <td style="font-size:11px; color:var(--ink-dim);">${item.contadoPor || '—'}</td>
+        <td><button class="row-del" data-barcode="${barcode}" title="Quitar">✕</button></td>
+      `;
+      resultsBody.appendChild(tr);
+    });
+  }
+  resultsBody.querySelectorAll('.row-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      delete counted[btn.dataset.barcode];
+      await saveCounted();
+      renderTable();
+      renderWorklist();
+      renderDiferencias();
+      renderCharts();
+    });
+  });
+  updateSummary(entries.map(e=>e[1]));
+}
+
+function updateSummary(items){
+  let ok=0, over=0, under=0;
+  items.forEach(it=>{
+    const d = it.encontrado - it.stock;
+    if(d===0) ok++; else if(d>0) over++; else under++;
+  });
+  el('sumTotal').textContent = items.length;
+  el('sumOk').textContent = ok;
+  el('sumOver').textContent = over;
+  el('sumUnder').textContent = under;
+
+  const eriBox = el('eriBox');
+  if(items.length === 0){
+    eriBox.className = 'kpi-box neutral';
+    el('eriValue').textContent = '—';
+    el('eriSub').textContent = 'Sin conteos aún';
+  } else {
+    const eri = (ok / items.length) * 100;
+    eriBox.className = 'kpi-box ' + kpiTier(eri);
+    el('eriValue').textContent = eri.toFixed(1) + '%';
+    el('eriSub').textContent = `${ok} de ${items.length} SKU exactos`;
+  }
+
+  const withLoc = items.filter(it => it.locSistema && it.locFisica);
+  const eruBox = el('eruBox');
+  if(withLoc.length === 0){
+    eruBox.className = 'kpi-box neutral';
+    el('eruValue').textContent = '—';
+    el('eruSub').textContent = 'Sin datos de ubicación';
+  } else {
+    const matches = withLoc.filter(it => it.locSistema.toLowerCase() === it.locFisica.toLowerCase()).length;
+    const eru = (matches / withLoc.length) * 100;
+    eruBox.className = 'kpi-box ' + kpiTier(eru);
+    el('eruValue').textContent = eru.toFixed(1) + '%';
+    el('eruSub').textContent = `${matches} de ${withLoc.length} ubicaciones verificadas`;
+  }
+}
+
+// --- modo "libre": código manual + búsqueda por nombre/sku/marca/tipo ---
+const libreCodeInput = el('libreCodeInput');
+const libreSearchInput = el('libreSearchInput');
+const libreSearchResults = el('libreSearchResults');
+
+function loadLibreCode(){
+  const p = findProduct(libreCodeInput.value);
+  if(p){ showProduct(p); libreCodeInput.value = ''; }
+  else { showToast('No se encontró ese código'); }
+}
+el('libreLoadBtn').addEventListener('click', loadLibreCode);
+libreCodeInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); loadLibreCode(); }
+});
+
+let libreSearchTimer = null;
+libreSearchInput.addEventListener('input', ()=>{
+  clearTimeout(libreSearchTimer);
+  libreSearchTimer = setTimeout(()=>{
+    const q = libreSearchInput.value.trim().toLowerCase();
+    if(q.length < 2){ libreSearchResults.style.display='none'; return; }
+    const matches = PRODUCTS.filter(p =>
+      p[2].toLowerCase().includes(q) || p[1].toLowerCase().includes(q) ||
+      (p[6]||'').toLowerCase().includes(q) || (p[7]||'').toLowerCase().includes(q)
+    ).slice(0, 25);
+    if(matches.length === 0){
+      libreSearchResults.innerHTML = '<div class="sr-item">Sin resultados</div>';
+    } else {
+      libreSearchResults.innerHTML = matches.map(p => `
+        <div class="sr-item" data-barcode="${p[0]}">
+          <div>${p[2]}${p[3] ? ' · ' + p[3] : ''}</div>
+          <div class="sr-sku">SKU ${p[1]} · Stock ${p[4]}${p[6] ? ' · ' + p[6] : ''}</div>
+        </div>
+      `).join('');
+    }
+    libreSearchResults.style.display = 'block';
+  }, 150);
+});
+libreSearchResults.addEventListener('click', (e)=>{
+  const item = e.target.closest('.sr-item');
+  if(!item || !item.dataset.barcode) return;
+  const p = byBarcode.get(item.dataset.barcode);
+  if(p){ showProduct(p); libreSearchInput.value=''; libreSearchResults.style.display='none'; }
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.search-box')) libreSearchResults.style.display = 'none';
+});
+
+// --- export CSV ---
+el('exportBtn').addEventListener('click', ()=>{
+  const entries = Object.entries(counted);
+  if(entries.length === 0){ showToast('No hay conteos para exportar'); return; }
+  let csv = 'SKU,Producto,Talla,Marca,Modelo,Stock Sistema,Cantidad Encontrada,Diferencia,Estado,Contado Por,Ubicacion Sistema,Ubicacion Fisica\n';
+  let ok = 0;
+  const withLoc = [];
+  entries.forEach(([barcode, item])=>{
+    const diff = item.encontrado - item.stock;
+    const estado = diff === 0 ? 'OK' : (diff > 0 ? 'SOBRANTE' : 'FALTANTE');
+    if(diff === 0) ok++;
+    if(item.locSistema && item.locFisica) withLoc.push(item);
+    const row = [item.sku, `"${(item.producto||'').replace(/"/g,'""')}"`, item.variante || '', item.marca || '', item.tipo || '', item.stock, item.encontrado, diff, estado, `"${(item.contadoPor||'').replace(/"/g,'""')}"`, item.locSistema || '', item.locFisica || ''];
+    csv += row.join(',') + '\n';
+  });
+  const eri = (ok / entries.length) * 100;
+  csv += `\nERI (Exactitud Registro Inventario),${eri.toFixed(1)}%,${ok} de ${entries.length} SKU exactos\n`;
+  if(withLoc.length > 0){
+    const matches = withLoc.filter(it => it.locSistema.toLowerCase() === it.locFisica.toLowerCase()).length;
+    const eru = (matches / withLoc.length) * 100;
+    csv += `ERU (Exactitud Registro Ubicaciones),${eru.toFixed(1)}%,${matches} de ${withLoc.length} ubicaciones verificadas\n`;
+  } else {
+    csv += `ERU (Exactitud Registro Ubicaciones),Sin datos,No se registraron ubicaciones\n`;
+  }
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'conteo_inventario_ezzeta_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// --- reset ---
+el('resetBtn').addEventListener('click', async ()=>{
+  if(!confirm('¿Seguro que querés borrar todo el conteo registrado?')) return;
+  counted = {};
+  await saveCounted();
+  renderTable();
+  renderWorklist();
+  renderDiferencias();
+  renderCharts();
+  showToast('Conteo reiniciado');
+});
+
+// ===================== CRITERIO / WORKLIST =====================
+let criterioMode = 'libre';
+let criterioValue = null;
+const modeButtons = document.querySelectorAll('.mode-btn');
+const criterioSub = el('criterioSub');
+const criterioSelect = el('criterioSelect');
+const criterioLibre = el('criterioLibre');
+const worklistCard = el('worklistCard');
+const wlSearch = el('wlSearch');
+
+function uniqueGroupCounts(idx){
+  const map = new Map();
+  PRODUCTS.forEach(p=>{
+    const v = p[idx];
+    if(!v) return;
+    map.set(v, (map.get(v)||0) + 1);
+  });
+  return [...map.entries()].sort((a,b)=> b[1]-a[1]);
+}
+
+function populateCriterioSelect(idx, placeholder){
+  const groups = uniqueGroupCounts(idx);
+  criterioSelect.innerHTML = `<option value="">${placeholder}</option>` +
+    groups.map(([name,count])=> `<option value="${name}">${name} (${count} SKU)</option>`).join('');
+}
+
+modeButtons.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    modeButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    criterioMode = btn.dataset.mode;
+    criterioValue = null;
+    wlSearch.value = '';
+    if(criterioMode === 'libre'){
+      criterioSub.style.display = 'none';
+      worklistCard.style.display = 'none';
+      criterioLibre.style.display = 'block';
+    } else if(criterioMode === 'stock'){
+      criterioSub.style.display = 'none';
+      criterioLibre.style.display = 'none';
+      worklistCard.style.display = 'block';
+      renderWorklist();
+    } else if(criterioMode === 'marca'){
+      criterioSub.style.display = 'block';
+      criterioLibre.style.display = 'none';
+      worklistCard.style.display = 'none';
+      populateCriterioSelect(6, 'Elegí una marca…');
+    } else if(criterioMode === 'tipo'){
+      criterioSub.style.display = 'block';
+      criterioLibre.style.display = 'none';
+      worklistCard.style.display = 'none';
+      populateCriterioSelect(7, 'Elegí un modelo/tipo…');
+    }
+  });
+});
+
+criterioSelect.addEventListener('change', ()=>{
+  criterioValue = criterioSelect.value || null;
+  worklistCard.style.display = criterioValue ? 'block' : 'none';
+  if(criterioValue) renderWorklist();
+});
+
+function getCriterioList(){
+  if(criterioMode === 'stock') return PRODUCTS.filter(p => p[4] < 10);
+  if(criterioMode === 'marca' && criterioValue) return PRODUCTS.filter(p => p[6] === criterioValue);
+  if(criterioMode === 'tipo' && criterioValue) return PRODUCTS.filter(p => p[7] === criterioValue);
+  return [];
+}
+
+function renderWorklist(){
+  if(criterioMode === 'libre') return;
+  if((criterioMode === 'marca' || criterioMode === 'tipo') && !criterioValue) return;
+  let list = getCriterioList();
+  const q = wlSearch.value.trim().toLowerCase();
+  if(q){
+    list = list.filter(p => p[2].toLowerCase().includes(q) || p[1].toLowerCase().includes(q));
+  }
+  const doneCount = list.filter(p => counted[p[0]]).length;
+  el('wlBadge').textContent = `${doneCount}/${list.length}`;
+  el('wlProgressFill').style.width = list.length ? (doneCount/list.length*100).toFixed(1) + '%' : '0%';
+
+  const sorted = [...list].sort((a,b)=>{
+    const da = counted[a[0]] ? 1 : 0, db = counted[b[0]] ? 1 : 0;
+    if(da !== db) return da - db;
+    return a[2].localeCompare(b[2]);
+  });
+
+  const wl = el('worklist');
+  if(sorted.length === 0){
+    wl.innerHTML = '<div class="wl-empty">No hay variantes que coincidan con este criterio.</div>';
+    return;
+  }
+  wl.innerHTML = sorted.map(p=>{
+    const done = !!counted[p[0]];
+    return `<div class="wl-item ${done ? 'done' : ''}" data-barcode="${p[0]}">
+      <div class="wl-check">${done ? '✓' : ''}</div>
+      <div class="wl-body">
+        <div class="wl-title">${p[2]}${p[3] ? ' · ' + p[3] : ''}</div>
+        <div class="wl-meta">SKU ${p[1]}${p[6] ? ' · ' + p[6] : ''}${done && counted[p[0]].contadoPor ? ' · <span class="by">' + counted[p[0]].contadoPor + '</span>' : ''}</div>
+      </div>
+      <div class="wl-stock">${p[4]}</div>
+    </div>`;
+  }).join('');
+  wl.querySelectorAll('.wl-item').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const p = byBarcode.get(row.dataset.barcode);
+      if(p){ showProduct(p); showToast('Cargado desde la lista de conteo'); }
+    });
+  });
+}
+wlSearch.addEventListener('input', ()=>{ renderWorklist(); });
+
+// ===================== DIFERENCIAS =====================
+const diffSearch = el('diffSearch');
+
+function renderDiferencias(){
+  const entries = Object.entries(counted).filter(([_, it]) => (it.encontrado - it.stock) !== 0);
+  const q = diffSearch.value.trim().toLowerCase();
+  const filtered = q
+    ? entries.filter(([_, it]) => it.producto.toLowerCase().includes(q) || it.sku.toLowerCase().includes(q))
+    : entries;
+  filtered.sort((a,b)=> Math.abs(b[1].encontrado - b[1].stock) - Math.abs(a[1].encontrado - a[1].stock));
+
+  el('diffBadge').textContent = entries.length;
+  const list = el('diffList');
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="wl-empty">${entries.length === 0 ? 'No hay diferencias registradas. Contá productos desde la pestaña Criterio.' : 'Ninguna diferencia coincide con ese filtro.'}</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(([barcode, it])=>{
+    const diff = it.encontrado - it.stock;
+    const dc = diffClass(diff);
+    return `<div class="wl-item" data-barcode="${barcode}">
+      <div class="diff-badge-wrap"><span class="badge ${dc.cls}">${dc.label}</span></div>
+      <div class="wl-body">
+        <div class="wl-title">${it.producto}${it.variante ? ' · ' + it.variante : ''}</div>
+        <div class="wl-meta">SKU ${it.sku} · Sist. ${it.stock} · Cont. ${it.encontrado}${it.contadoPor ? ' · <span class="by">' + it.contadoPor + '</span>' : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.wl-item').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      const p = byBarcode.get(row.dataset.barcode);
+      if(p){ showProduct(p, {skipDoubleCheck:true}); }
+    });
+  });
+}
+diffSearch.addEventListener('input', ()=> renderDiferencias());
+
+// ===================== CHARTS =====================
+let chartDonut=null, chartFaltantes=null, chartBrand=null, chartTipo=null;
+const CHART_COLORS = {ok:'#5cb98a', warn:'#e2ac72', bad:'#e08072', pending:'#2c4270', brass:'#c8935a', ink:'#9fabc7'};
+
+function renderCharts(){
+  if(!currentUser || currentUser.rol !== 'admin') return;
+  if(typeof Chart === 'undefined'){ console.warn('Chart.js no cargó todavía'); return; }
+  if(!renderCharts._defaultsSet){
+    Chart.defaults.color = '#9fabc7';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    renderCharts._defaultsSet = true;
+  }
+  const items = Object.values(counted);
+
+  // --- donut: ok/over/under ---
+  let ok=0, over=0, under=0;
+  items.forEach(it=>{
+    const d = it.encontrado - it.stock;
+    if(d===0) ok++; else if(d>0) over++; else under++;
+  });
+  const donutCanvas = el('donutChart');
+  if(items.length === 0){
+    el('donutEmpty').style.display = 'block';
+    donutCanvas.style.display = 'none';
+  } else {
+    el('donutEmpty').style.display = 'none';
+    donutCanvas.style.display = 'block';
+    const data = [ok, over, under];
+    if(!chartDonut){
+      chartDonut = new Chart(donutCanvas, {
+        type:'doughnut',
+        data:{ labels:['Coinciden','Sobrantes','Faltantes'], datasets:[{data, backgroundColor:[CHART_COLORS.ok, CHART_COLORS.warn, CHART_COLORS.bad], borderColor:'#182541', borderWidth:2}] },
+        options:{ responsive:true, cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, padding:14 } } } }
+      });
+    } else {
+      chartDonut.data.datasets[0].data = data;
+      chartDonut.update();
+    }
+  }
+
+  // --- top faltantes ---
+  const faltantesCanvas = el('faltantesChart');
+  const faltantes = items
+    .map(it=>({label: it.producto + (it.variante ? ' · '+it.variante : ''), diff: it.encontrado - it.stock}))
+    .filter(it=> it.diff < 0)
+    .sort((a,b)=> a.diff - b.diff)
+    .slice(0,8);
+  if(faltantes.length === 0){
+    el('faltantesEmpty').style.display = 'block';
+    faltantesCanvas.style.display = 'none';
+  } else {
+    el('faltantesEmpty').style.display = 'none';
+    faltantesCanvas.style.display = 'block';
+    const labels = faltantes.map(f=>f.label.length > 28 ? f.label.slice(0,26)+'…' : f.label);
+    const data = faltantes.map(f=>Math.abs(f.diff));
+    if(!chartFaltantes){
+      chartFaltantes = new Chart(faltantesCanvas, {
+        type:'bar',
+        data:{ labels, datasets:[{ label:'Unidades faltantes', data, backgroundColor: CHART_COLORS.bad, borderRadius:4 }] },
+        options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } },
+          scales:{ x:{ beginAtZero:true, grid:{ color:'#213158' } }, y:{ grid:{ display:false } } } }
+      });
+    } else {
+      chartFaltantes.data.labels = labels;
+      chartFaltantes.data.datasets[0].data = data;
+      chartFaltantes.update();
+    }
+  }
+
+  // --- coverage by brand ---
+  const brandTotals = new Map();
+  PRODUCTS.forEach(p=>{ if(p[6]) brandTotals.set(p[6], (brandTotals.get(p[6])||0)+1); });
+  const brandDone = new Map();
+  items.forEach(it=>{ if(it.marca) brandDone.set(it.marca, (brandDone.get(it.marca)||0)+1); });
+  const brandEntries = [...brandTotals.entries()].sort((a,b)=>b[1]-a[1]);
+  const brandLabels = brandEntries.map(e=>e[0]);
+  const brandDoneData = brandEntries.map(e=> brandDone.get(e[0]) || 0);
+  const brandPendingData = brandEntries.map(e=> e[1] - (brandDone.get(e[0]) || 0));
+  if(!chartBrand){
+    chartBrand = new Chart(el('brandChart'), {
+      type:'bar',
+      data:{ labels: brandLabels, datasets:[
+        { label:'Contados', data: brandDoneData, backgroundColor: CHART_COLORS.ok, stack:'s', borderRadius:4 },
+        { label:'Pendientes', data: brandPendingData, backgroundColor: CHART_COLORS.pending, stack:'s', borderRadius:4 }
+      ]},
+      options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ position:'bottom', labels:{boxWidth:10} } },
+        scales:{ x:{ stacked:true, grid:{ color:'#213158' } }, y:{ stacked:true, grid:{ display:false } } } }
+    });
+  } else {
+    chartBrand.data.datasets[0].data = brandDoneData;
+    chartBrand.data.datasets[1].data = brandPendingData;
+    chartBrand.update();
+  }
+
+  // --- coverage by tipo (top 10) ---
+  const tipoTotals = new Map();
+  PRODUCTS.forEach(p=>{ if(p[7]) tipoTotals.set(p[7], (tipoTotals.get(p[7])||0)+1); });
+  const tipoDone = new Map();
+  items.forEach(it=>{ if(it.tipo) tipoDone.set(it.tipo, (tipoDone.get(it.tipo)||0)+1); });
+  const tipoEntries = [...tipoTotals.entries()].sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const tipoLabels = tipoEntries.map(e=>e[0]);
+  const tipoDoneData = tipoEntries.map(e=> tipoDone.get(e[0]) || 0);
+  const tipoPendingData = tipoEntries.map(e=> e[1] - (tipoDone.get(e[0]) || 0));
+  if(!chartTipo){
+    chartTipo = new Chart(el('tipoChart'), {
+      type:'bar',
+      data:{ labels: tipoLabels, datasets:[
+        { label:'Contados', data: tipoDoneData, backgroundColor: CHART_COLORS.ok, stack:'s', borderRadius:4 },
+        { label:'Pendientes', data: tipoPendingData, backgroundColor: CHART_COLORS.pending, stack:'s', borderRadius:4 }
+      ]},
+      options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ position:'bottom', labels:{boxWidth:10} } },
+        scales:{ x:{ stacked:true, grid:{ color:'#213158' } }, y:{ stacked:true, grid:{ display:false } } } }
+    });
+  } else {
+    chartTipo.data.labels = tipoLabels;
+    chartTipo.data.datasets[0].data = tipoDoneData;
+    chartTipo.data.datasets[1].data = tipoPendingData;
+    chartTipo.update();
+  }
+}
+
+
+// ===================== AUTH: USERS & SESSION =====================
+const USERS_KEY = 'ezzeta-users';
+const SESSION_KEY = 'ezzeta-session';
+let users = [];
+let currentUser = null;
+
+async function hashPassword(pw){
+  try{
+    const enc = new TextEncoder().encode(pw);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let hash = 5381;
+    for(let i=0;i<pw.length;i++){ hash = ((hash<<5)+hash) + pw.charCodeAt(i); hash &= 0xffffffff; }
+    return 'fb' + (hash>>>0).toString(16);
+  }
+}
+
+async function loadUsers(){
+  try{
+    const res = await window.storage.get(USERS_KEY, true);
+    users = (res && res.value) ? JSON.parse(res.value) : [];
+  }catch(e){ users = []; }
+}
+async function saveUsers(){
+  try{ await window.storage.set(USERS_KEY, JSON.stringify(users), true); }
+  catch(e){ console.error('users storage error', e); }
+}
+async function loadSession(){
+  try{
+    const res = await window.storage.get(SESSION_KEY, false);
+    return (res && res.value) ? res.value : null;
+  }catch(e){ return null; }
+}
+async function saveSession(username){
+  try{ await window.storage.set(SESSION_KEY, username, false); }catch(e){}
+}
+async function clearSession(){
+  try{ await window.storage.delete(SESSION_KEY, false); }catch(e){}
+}
+
+function roleLabel(rol){
+  if(rol === 'admin') return 'Administrador';
+  if(rol === 'stock') return 'Responsable de stock';
+  return 'Usuario';
+}
+
+function showAuthPanel(which){
+  el('setupCard').style.display = which === 'setup' ? 'block' : 'none';
+  el('loginCard').style.display = which === 'login' ? 'block' : 'none';
+  el('authScreen').style.display = 'flex';
+  el('appRoot').style.display = 'none';
+}
+
+function applyRolePermissions(){
+  const isAdmin = currentUser.rol === 'admin';
+  el('tabBtnMetricas').style.display = isAdmin ? '' : 'none';
+  el('tabBtnUsuarios').style.display = isAdmin ? '' : 'none';
+  el('kpiCard').style.display = isAdmin ? '' : 'none';
+  goToTab('criterio');
+}
+
+async function loadProducts(){
+  try{
+    const res = await window.storage.get('ezzeta-products', true);
+    if(res && res.value){
+      PRODUCTS = JSON.parse(res.value);
+      rebuildProductMaps();
+    }
+  }catch(e){ /* no import yet, keep PRODUCTS_DEFAULT */ }
+}
+
+async function enterApp(user){
+  currentUser = user;
+  el('authScreen').style.display = 'none';
+  el('appRoot').style.display = 'block';
+  el('userInfoBox').style.display = 'flex';
+  el('uiName').textContent = user.nombre;
+  el('uiRole').textContent = roleLabel(user.rol);
+  applyRolePermissions();
+  await loadProducts();
+  if(user.rol === 'admin'){ renderUsersTable(); }
+  await loadCounted();
+}
+
+// --- setup (first admin) ---
+el('setupSubmitBtn').addEventListener('click', async ()=>{
+  const errBox = el('setupError');
+  errBox.style.display = 'none';
+  const username = el('setupUsername').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pw = el('setupPassword').value;
+  if(!username){ errBox.textContent = 'Completá el usuario.'; errBox.style.display='block'; return; }
+  if(pw.length < 4){ errBox.textContent = 'La contraseña debe tener mínimo 4 caracteres.'; errBox.style.display='block'; return; }
+  const nombre = username.charAt(0).toUpperCase() + username.slice(1);
+  const passwordHash = await hashPassword(pw);
+  const user = { username, nombre, password: passwordHash, rol: 'admin', ts: Date.now() };
+  users = [user];
+  await saveUsers();
+  await saveSession(username);
+  await enterApp(user);
+});
+
+// --- login ---
+async function doLogin(){
+  const errBox = el('loginError');
+  errBox.style.display = 'none';
+  const username = el('loginUsername').value.trim().toLowerCase().replace(/\s+/g,'');
+  const pw = el('loginPassword').value;
+  if(!username || !pw){ errBox.textContent = 'Completá usuario y contraseña.'; errBox.style.display='block'; return; }
+  const user = users.find(u => u.username === username);
+  if(!user){ errBox.textContent = 'Usuario o contraseña incorrectos.'; errBox.style.display='block'; return; }
+  const hash = await hashPassword(pw);
+  if(hash !== user.password){ errBox.textContent = 'Usuario o contraseña incorrectos.'; errBox.style.display='block'; return; }
+  await saveSession(username);
+  await enterApp(user);
+}
+el('loginSubmitBtn').addEventListener('click', doLogin);
+el('loginPassword').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+el('setupPassword').addEventListener('keydown', (e)=>{ if(e.key==='Enter') el('setupSubmitBtn').click(); });
+
+el('logoutBtn').addEventListener('click', async ()=>{
+  await clearSession();
+  location.reload();
+});
+
+// --- users management (admin only) ---
+function renderUsersTable(){
+  const body = el('usersBody');
+  el('usersCountBadge').textContent = users.length;
+  body.innerHTML = users.map((u, i)=>{
+    const isSelf = currentUser && u.username === currentUser.username;
+    const action = isSelf
+      ? '<span class="session-tag">Sesión actual</span>'
+      : `<button class="btn-danger-outline" data-username="${u.username}">ELIMINAR</button>`;
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="font-family:'Roboto Mono',monospace;">${u.username}</td>
+      <td>${u.nombre}</td>
+      <td><span class="role-pill ${u.rol}">${roleLabel(u.rol)}</span></td>
+      <td>${action}</td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('.btn-danger-outline').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteUser(btn.dataset.username));
+  });
+}
+
+async function deleteUser(username){
+  const user = users.find(u => u.username === username);
+  if(!user) return;
+  if(currentUser && username === currentUser.username){
+    alert('No podés eliminarte a vos mismo mientras tenés la sesión iniciada.');
+    return;
+  }
+  if(user.rol === 'admin' && users.filter(u=>u.rol==='admin').length <= 1){
+    alert('No podés eliminar al único administrador.');
+    return;
+  }
+  if(!confirm(`¿Eliminar a ${user.nombre} (${user.username})?`)) return;
+  users = users.filter(u => u.username !== username);
+  await saveUsers();
+  renderUsersTable();
+  showToast('Usuario eliminado');
+}
+
+el('createUserBtn').addEventListener('click', async ()=>{
+  const errBox = el('userFormError');
+  errBox.style.display = 'none';
+  const username = el('newUsername').value.trim().toLowerCase().replace(/\s+/g,'');
+  const nombre = el('newFullname').value.trim();
+  const pw = el('newPassword').value;
+  const rol = el('newRole').value;
+  if(!username || !nombre){ errBox.textContent = 'Completá usuario y nombre completo.'; errBox.style.display='block'; return; }
+  if(pw.length < 4){ errBox.textContent = 'La contraseña debe tener mínimo 4 caracteres.'; errBox.style.display='block'; return; }
+  if(users.some(u => u.username === username)){ errBox.textContent = 'Ese usuario ya existe.'; errBox.style.display='block'; return; }
+  const passwordHash = await hashPassword(pw);
+  users.push({ username, nombre, password: passwordHash, rol, ts: Date.now() });
+  await saveUsers();
+  renderUsersTable();
+  el('newUsername').value = '';
+  el('newFullname').value = '';
+  el('newPassword').value = '';
+  el('newRole').value = 'stock';
+  showToast('Usuario creado');
+});
+
+// --- importar catálogo de stock (admin) ---
+function normHeader(h){
+  return String(h||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // quita tildes
+}
+function findCol(rowObj, candidates){
+  const keys = Object.keys(rowObj);
+  for(const cand of candidates){
+    const target = normHeader(cand);
+    const match = keys.find(k => normHeader(k) === target);
+    if(match) return match;
+  }
+  return null;
+}
+
+el('importStockBtn').addEventListener('click', async ()=>{
+  const errBox = el('importError');
+  const statusEl = el('importStatus');
+  errBox.style.display = 'none';
+  statusEl.textContent = '';
+  const fileInput = el('importFile');
+  const file = fileInput.files && fileInput.files[0];
+  if(!file){ errBox.textContent = 'Elegí un archivo primero.'; errBox.style.display='block'; return; }
+  if(typeof XLSX === 'undefined'){ errBox.textContent = 'No se pudo cargar el lector de Excel. Revisá tu conexión y probá de nuevo.'; errBox.style.display='block'; return; }
+
+  statusEl.textContent = 'Leyendo archivo…';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const wsname = wb.SheetNames[0];
+    const ws = wb.Sheets[wsname];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    if(!rows.length){ throw new Error('El archivo no tiene filas de datos.'); }
+
+    const colBarcode = findCol(rows[0], ['Código Barras','Codigo Barras','Codigo de Barras','Barcode']);
+    const colSku = findCol(rows[0], ['SKU']);
+    const colProducto = findCol(rows[0], ['Producto']);
+    const colVariante = findCol(rows[0], ['Variante','Talla']);
+    const colStock = findCol(rows[0], ['Stock']);
+    const colDespachar = findCol(rows[0], ['Cantidad por Despachar','Por Despachar']);
+    const colMarca = findCol(rows[0], ['Marca']);
+    const colTipo = findCol(rows[0], ['Tipo de Producto','Tipo']);
+
+    if(!colBarcode || !colProducto){
+      throw new Error('No se encontraron las columnas "Código Barras" y "Producto". Verificá el formato del archivo.');
+    }
+
+    const newProducts = [];
+    for(const row of rows){
+      const barcode = String(row[colBarcode] ?? '').trim();
+      const producto = String(row[colProducto] ?? '').trim();
+      if(!barcode || !producto) continue;
+      const sku = colSku ? String(row[colSku] ?? '').trim() || barcode : barcode;
+      const variante = colVariante ? String(row[colVariante] ?? '').trim() : '';
+      const stock = colStock ? parseInt(row[colStock], 10) || 0 : 0;
+      const despachar = colDespachar ? parseInt(row[colDespachar], 10) || 0 : 0;
+      const marca = colMarca ? String(row[colMarca] ?? '').trim() : '';
+      const tipo = colTipo ? String(row[colTipo] ?? '').trim() : '';
+      newProducts.push([barcode, sku, producto, variante, stock, despachar, marca, tipo]);
+    }
+
+    if(newProducts.length === 0){ throw new Error('No se reconoció ninguna fila válida.'); }
+
+    const ok = confirm(
+      `Se leyeron ${newProducts.length} variantes de producto.\n\n` +
+      `Esto va a REEMPLAZAR el catálogo actual (${PRODUCTS.length} variantes) para todo el equipo.\n` +
+      `Los conteos ya registrados NO se borran.\n\n¿Confirmás la importación?`
+    );
+    if(!ok){ statusEl.textContent = ''; return; }
+
+    statusEl.textContent = 'Guardando catálogo…';
+    PRODUCTS = newProducts;
+    rebuildProductMaps();
+    await window.storage.set('ezzeta-products', JSON.stringify(PRODUCTS), true);
+
+    // refrescar vistas que dependen del catálogo
+    if(criterioMode === 'marca') populateCriterioSelect(6, 'Elegí una marca…');
+    if(criterioMode === 'tipo') populateCriterioSelect(7, 'Elegí un modelo/tipo…');
+    renderWorklist();
+    renderDiferencias();
+    renderCharts();
+
+    fileInput.value = '';
+    statusEl.textContent = `✓ Catálogo actualizado: ${PRODUCTS.length} variantes (${new Date().toLocaleString('es-PE')}).`;
+    showToast('Catálogo de stock actualizado');
+  }catch(err){
+    errBox.textContent = 'No se pudo importar: ' + err.message;
+    errBox.style.display = 'block';
+    statusEl.textContent = '';
+  }
+});
+
+// ===================== INIT =====================
+async function initApp(){
+  await loadUsers();
+  const sessionUsername = await loadSession();
+  if(users.length === 0){
+    showAuthPanel('setup');
+    return;
+  }
+  if(sessionUsername){
+    const u = users.find(x => x.username === sessionUsername);
+    if(u){ await enterApp(u); return; }
+  }
+  showAuthPanel('login');
+}
+
+initApp();
+
+</script>
+</body>
+</html>
