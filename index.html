@@ -361,7 +361,9 @@ tr:last-child td{border-bottom:none;}
 .auth-mark .m1, .auth-mark .m2{
   font-family:'Bodoni Moda', serif; font-weight:700; font-size:38px; line-height:1; color:#f2ede4;
 }
-.auth-mark .m2{ transform:scaleX(-1); margin-left:-14px; }
+.auth-mark .m2{ transform:scaleX(-1); margin-left:-4px; }
+.wordmark-zz{ display:inline-flex; }
+.wordmark-zz span:last-child{ transform:scaleX(-1); margin-left:-0.10em; }
 .auth-eyebrow{
   font-family:'Roboto Mono',monospace; font-size:10.5px; letter-spacing:3px; text-transform:uppercase;
   color:#7d7a72; margin:0 0 18px; line-height:1.6;
@@ -475,9 +477,9 @@ input[type=file]::file-selector-button{
 <body>
 <div id="authScreen">
   <div class="auth-card" id="setupCard" style="display:none;">
-    <div class="auth-mark"><span class="m1">E</span><span class="m2">E</span></div>
+    <div class="auth-mark"><span class="m1">Z</span><span class="m2">Z</span></div>
     <p class="auth-eyebrow">CONTROL DE<br>INVENTARIO CÍCLICO</p>
-    <p class="auth-wordmark">EZZETA</p>
+    <p class="auth-wordmark">E<span class="wordmark-zz"><span>Z</span><span class="z2">Z</span></span>ETA</p>
     <div class="auth-error" id="setupError"></div>
     <div class="field">
       <label class="field-label">Usuario</label>
@@ -492,9 +494,9 @@ input[type=file]::file-selector-button{
   </div>
 
   <div class="auth-card" id="loginCard" style="display:none;">
-    <div class="auth-mark"><span class="m1">E</span><span class="m2">E</span></div>
+    <div class="auth-mark"><span class="m1">Z</span><span class="m2">Z</span></div>
     <p class="auth-eyebrow">CONTROL DE<br>INVENTARIO CÍCLICO</p>
-    <p class="auth-wordmark">EZZETA</p>
+    <p class="auth-wordmark">E<span class="wordmark-zz"><span>Z</span><span class="z2">Z</span></span>ETA</p>
     <div class="auth-error" id="loginError"></div>
     <div class="field">
       <label class="field-label">Usuario</label>
@@ -512,9 +514,9 @@ input[type=file]::file-selector-button{
 <div id="appRoot" style="display:none;">
 <div class="logobar">
   <div class="logobar-inner">
-    <div class="auth-mark"><span class="m1">E</span><span class="m2">E</span></div>
+    <div class="auth-mark"><span class="m1">Z</span><span class="m2">Z</span></div>
     <p class="auth-eyebrow" style="margin-bottom:10px;">CONTROL DE<br>INVENTARIO CÍCLICO</p>
-    <p class="auth-wordmark" style="margin-bottom:6px;">EZZETA</p>
+    <p class="auth-wordmark" style="margin-bottom:6px;">E<span class="wordmark-zz"><span>Z</span><span class="z2">Z</span></span>ETA</p>
     <div class="logobar-right userinfo" id="userInfoBox" style="display:none;">
       <div>
         <div class="ui-name" id="uiName">—</div>
@@ -595,7 +597,7 @@ input[type=file]::file-selector-button{
       <p class="hint" style="margin-top:-4px;">Productos ya contados cuyo resultado no coincidió con el sistema. Tocá uno para hacer el reconteo — si el nuevo conteo coincide, sale de esta lista.</p>
       <div class="scan-row" style="margin-bottom:10px;">
         <input type="text" class="wl-search" id="diffSearch" placeholder="Filtrar por nombre o SKU…" style="margin-bottom:0;">
-        <button class="btn btn-ghost" id="exportDiffBtn" style="flex:none;">⬇ Excel</button>
+        <button class="btn btn-brass" id="exportDiffBtn" style="flex:none;">⬇ Excel</button>
       </div>
       <div id="diffList"></div>
     </div>
@@ -1552,6 +1554,7 @@ function applyRolePermissions(){
   el('tabBtnMetricas').style.display = isAdmin ? '' : 'none';
   el('tabBtnUsuarios').style.display = isAdmin ? '' : 'none';
   el('kpiCard').style.display = isAdmin ? '' : 'none';
+  el('exportDiffBtn').style.display = isAdmin ? '' : 'none';
   goToTab('criterio');
 }
 
