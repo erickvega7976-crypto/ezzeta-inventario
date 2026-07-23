@@ -618,7 +618,10 @@ input[type=file]::file-selector-button{
     <div class="card">
       <h2><span class="dot"></span>Diferencias de inventario <span class="count-badge" id="diffBadge">0</span></h2>
       <p class="hint" style="margin-top:-4px;">Productos ya contados cuyo resultado no coincidió con el sistema. Tocá uno para hacer el reconteo — si el nuevo conteo coincide, sale de esta lista.</p>
-      <input type="text" class="wl-search" id="diffSearch" placeholder="Filtrar por nombre o SKU…">
+      <div class="scan-row" style="margin-bottom:10px;">
+        <input type="text" class="wl-search" id="diffSearch" placeholder="Filtrar por nombre o SKU…" style="margin-bottom:0;">
+        <button class="btn btn-ghost" id="exportDiffBtn" style="flex:none;">⬇ Excel</button>
+      </div>
       <div id="diffList"></div>
     </div>
   </div>
@@ -1357,6 +1360,41 @@ function renderDiferencias(){
   });
 }
 diffSearch.addEventListener('input', ()=> renderDiferencias());
+
+el('exportDiffBtn').addEventListener('click', ()=>{
+  const entries = Object.entries(counted).filter(([_, it]) => (it.encontrado - it.stock) !== 0);
+  if(entries.length === 0){ showToast('No hay diferencias para exportar'); return; }
+  if(typeof XLSX === 'undefined'){ showToast('No se pudo cargar el lector de Excel. Revisá tu conexión.'); return; }
+
+  entries.sort((a,b)=> Math.abs(b[1].encontrado - b[1].stock) - Math.abs(a[1].encontrado - a[1].stock));
+
+  const rows = entries.map(([barcode, it])=>{
+    const diff = it.encontrado - it.stock;
+    return {
+      'SKU': it.sku,
+      'Producto': it.producto,
+      'Talla': it.variante || '',
+      'Marca': it.marca || '',
+      'Modelo': it.tipo || '',
+      'Código Barras': barcode,
+      'Stock Sistema': it.stock,
+      'Cantidad Contada': it.encontrado,
+      'Diferencia': diff,
+      'Estado': diff > 0 ? 'SOBRANTE' : 'FALTANTE',
+      'Contado Por': it.contadoPor || '',
+      'Reconteo (completar)': ''
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:14},{wch:34},{wch:8},{wch:12},{wch:16},{wch:16},{wch:12},{wch:14},{wch:11},{wch:11},{wch:16},{wch:18}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Diferencias');
+  const fecha = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `diferencias_inventario_ezzeta_${fecha}.xlsx`);
+});
 
 // ===================== CHARTS =====================
 let chartDonut=null, chartFaltantes=null, chartBrand=null, chartTipo=null;
